@@ -1,0 +1,166 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.086.001.02">
+  <BkSvcsBllgStmt>
+    <RptHdr>
+      <RptId>BILLRPT-0001</RptId>
+      <MsgPgntn>
+        <PgNb>1</PgNb>
+        <LastPgInd>true</LastPgInd>
+      </MsgPgntn>
+    </RptHdr>
+    <BllgStmtGrp>
+      <GrpId>BILLGRP-0001</GrpId>
+      <Sndr>
+        <Nm>Commerzbank AG</Nm>
+      </Sndr>
+      <Rcvr>
+        <Nm>Example Debtor GmbH</Nm>
+      </Rcvr>
+      <BllgStmt>
+        <StmtId>BILLSTMT-0001</StmtId>
+        <FrToDt>
+          <FrDt>2026-08-01</FrDt>
+          <ToDt>2026-08-31</ToDt>
+        </FrToDt>
+        <CreDtTm>2026-09-01T09:00:00+02:00</CreDtTm>
+        <Sts>FINL</Sts>
+        <AcctChrtcs>
+          <AcctLvl>STMT</AcctLvl>
+          <CshAcct>
+            <Id>
+              <IBAN>DE89370400440532013000</IBAN>
+            </Id>
+          </CshAcct>
+          <AcctSvcr>
+            <FinInstnId>
+              <BIC>COBADEFFXXX</BIC>
+              <Nm>Commerzbank AG</Nm>
+            </FinInstnId>
+          </AcctSvcr>
+          <AcctBalCcyCd>EUR</AcctBalCcyCd>
+          <SttlmCcyCd>EUR</SttlmCcyCd>
+          <HstCcyCd>EUR</HstCcyCd>
+        </AcctChrtcs>
+        <Bal>
+          <Tp>
+            <Cd>CLBD</Cd>
+          </Tp>
+          <Val>
+            <Amt Ccy="EUR">45.90</Amt>
+          </Val>
+          <CdtDbtInd>DBIT</CdtDbtInd>
+        </Bal>
+        <Svc>
+          <SvcDtl>
+            <BkSvc>
+              <Id>ACCTMAINT</Id>
+              <SubSvc>
+                <Id>MONTHLY</Id>
+                <Issr>
+                  <Cd>BANK</Cd>
+                </Issr>
+              </SubSvc>
+              <Desc>Account maintenance fee</Desc>
+              <CmonCd>
+                <Cd>A001</Cd>
+              </CmonCd>
+              <SvcTp>STAN</SvcTp>
+              <BkTxCd>
+                <Domn>
+                  <Cd>ACMT</Cd>
+                  <Fmly>
+                    <Cd>SVCC</Cd>
+                    <SubFmlyCd>FEES</SubFmlyCd>
+                  </Fmly>
+                </Domn>
+              </BkTxCd>
+            </BkSvc>
+            <Vol>1</Vol>
+          </SvcDtl>
+          <Pric>
+            <Ccy>EUR</Ccy>
+            <UnitPric>
+              <Amt Ccy="EUR">15.00</Amt>
+            </UnitPric>
+            <Mtd>FLAT</Mtd>
+          </Pric>
+          <PmtMtd>DDBT</PmtMtd>
+          <OrgnlChrgPric>
+            <Amt Ccy="EUR">15.00</Amt>
+          </OrgnlChrgPric>
+          <OrgnlChrgSttlmAmt>
+            <Amt Ccy="EUR">15.00</Amt>
+          </OrgnlChrgSttlmAmt>
+          <TaxDsgnt>
+            <Cd>TAXB</Cd>
+          </TaxDsgnt>
+        </Svc>
+        <Svc>
+          <SvcDtl>
+            <BkSvc>
+              <Id>WIRETRANSFER</Id>
+              <SubSvc>
+                <Id>OUTGOING</Id>
+              </SubSvc>
+              <Desc>Outgoing wire transfer fee</Desc>
+              <CmonCd>
+                <Cd>B002</Cd>
+              </CmonCd>
+              <SvcTp>STAN</SvcTp>
+            </BkSvc>
+            <Vol>5</Vol>
+          </SvcDtl>
+          <Pric>
+            <Ccy>EUR</Ccy>
+            <UnitPric>
+              <Amt Ccy="EUR">5.00</Amt>
+            </UnitPric>
+            <Mtd>UNIT</Mtd>
+          </Pric>
+          <PmtMtd>DDBT</PmtMtd>
+          <OrgnlChrgPric>
+            <Amt Ccy="EUR">25.00</Amt>
+          </OrgnlChrgPric>
+          <TaxDsgnt>
+            <Cd>TAXB</Cd>
+          </TaxDsgnt>
+        </Svc>
+        <Svc>
+          <SvcDtl>
+            <BkSvc>
+              <Id>STMTPRINT</Id>
+              <Desc>Paper statement fee</Desc>
+              <CmonCd>
+                <Cd>C003</Cd>
+              </CmonCd>
+              <SvcTp>STAN</SvcTp>
+            </BkSvc>
+            <Vol>1</Vol>
+          </SvcDtl>
+          <Pric>
+            <Ccy>EUR</Ccy>
+            <UnitPric>
+              <Amt Ccy="EUR">5.90</Amt>
+            </UnitPric>
+            <Mtd>FLAT</Mtd>
+          </Pric>
+          <PmtMtd>DDBT</PmtMtd>
+          <OrgnlChrgPric>
+            <Amt Ccy="EUR">5.90</Amt>
+          </OrgnlChrgPric>
+          <TaxDsgnt>
+            <Cd>EXMPT</Cd>
+          </TaxDsgnt>
+        </Svc>
+        <TaxRgn>
+          <RgnNb>DE</RgnNb>
+          <RgnNm>Germany</RgnNm>
+          <CstmrTaxId>DE123456789</CstmrTaxId>
+          <TtlTaxAmt>
+            <Amt Ccy="EUR">8.72</Amt>
+          </TtlTaxAmt>
+        </TaxRgn>
+      </BllgStmt>
+    </BllgStmtGrp>
+  </BkSvcsBllgStmt>
+</Document>

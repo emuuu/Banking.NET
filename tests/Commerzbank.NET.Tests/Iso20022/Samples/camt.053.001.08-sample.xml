@@ -1,0 +1,452 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.053.001.08">
+  <BkToCstmrStmt>
+    <GrpHdr>
+      <MsgId>MSGID-20260901-0001</MsgId>
+      <CreDtTm>2026-09-01T08:00:00+02:00</CreDtTm>
+      <MsgRcpt>
+        <Nm>Example Debtor GmbH</Nm>
+      </MsgRcpt>
+      <MsgPgntn>
+        <PgNb>1</PgNb>
+        <LastPgInd>true</LastPgInd>
+      </MsgPgntn>
+      <AddtlInf>Monthly account statement</AddtlInf>
+    </GrpHdr>
+    <Stmt>
+      <Id>STMT-0001</Id>
+      <ElctrncSeqNb>12</ElctrncSeqNb>
+      <LglSeqNb>5</LglSeqNb>
+      <CreDtTm>2026-09-01T08:05:00</CreDtTm>
+      <FrToDt>
+        <FrDtTm>2026-08-01T00:00:00+02:00</FrDtTm>
+        <ToDtTm>2026-08-31T23:59:59+02:00</ToDtTm>
+      </FrToDt>
+      <Acct>
+        <Id>
+          <IBAN>DE89370400440532013000</IBAN>
+        </Id>
+        <Ccy>EUR</Ccy>
+        <Nm>Example Debtor GmbH Main Account</Nm>
+        <Ownr>
+          <Nm>Example Debtor GmbH</Nm>
+        </Ownr>
+        <Svcr>
+          <FinInstnId>
+            <BICFI>COBADEFFXXX</BICFI>
+            <Nm>Commerzbank AG</Nm>
+          </FinInstnId>
+        </Svcr>
+      </Acct>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>OPBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="EUR">10000.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2026-08-01</Dt>
+        </Dt>
+      </Bal>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>CLBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="EUR">10500.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2026-08-31</Dt>
+        </Dt>
+      </Bal>
+      <TxsSummry>
+        <TtlNtries>
+          <NbOfNtries>2</NbOfNtries>
+          <Sum>1500.00</Sum>
+          <TtlNetNtry>
+            <Amt>500.00</Amt>
+            <CdtDbtInd>CRDT</CdtDbtInd>
+          </TtlNetNtry>
+        </TtlNtries>
+        <TtlCdtNtries>
+          <NbOfNtries>1</NbOfNtries>
+          <Sum>1000.00</Sum>
+        </TtlCdtNtries>
+        <TtlDbtNtries>
+          <NbOfNtries>1</NbOfNtries>
+          <Sum>500.00</Sum>
+        </TtlDbtNtries>
+      </TxsSummry>
+      <Ntry>
+        <NtryRef>ENTRYREF-0001</NtryRef>
+        <Amt Ccy="EUR">1000.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Sts>
+          <Cd>BOOK</Cd>
+        </Sts>
+        <BookgDt>
+          <Dt>2026-08-15</Dt>
+        </BookgDt>
+        <ValDt>
+          <Dt>2026-08-15</Dt>
+        </ValDt>
+        <AcctSvcrRef>ASR-0001</AcctSvcrRef>
+        <BkTxCd>
+          <Domn>
+            <Cd>PMNT</Cd>
+            <Fmly>
+              <Cd>RCDT</Cd>
+              <SubFmlyCd>ESCT</SubFmlyCd>
+            </Fmly>
+          </Domn>
+        </BkTxCd>
+        <NtryDtls>
+          <Btch>
+            <MsgId>BATCHMSG-0001</MsgId>
+            <PmtInfId>BATCHPMT-0001</PmtInfId>
+            <NbOfTxs>2</NbOfTxs>
+            <TtlAmt Ccy="EUR">1000.00</TtlAmt>
+            <CdtDbtInd>CRDT</CdtDbtInd>
+          </Btch>
+          <TxDtls>
+            <Refs>
+              <EndToEndId>E2E-0001</EndToEndId>
+              <InstrId>INSTR-0001</InstrId>
+              <TxId>TXID-0001</TxId>
+              <UETR>8a562c67-ca16-48ba-b074-65581be6f001</UETR>
+            </Refs>
+            <Amt Ccy="EUR">600.00</Amt>
+            <CdtDbtInd>CRDT</CdtDbtInd>
+            <AmtDtls>
+              <InstdAmt>
+                <Amt Ccy="EUR">600.00</Amt>
+              </InstdAmt>
+            </AmtDtls>
+            <RltdPties>
+              <Dbtr>
+                <Pty>
+                  <Nm>Example Creditor Ltd</Nm>
+                </Pty>
+              </Dbtr>
+              <DbtrAcct>
+                <Id>
+                  <IBAN>DE02120300000000202051</IBAN>
+                </Id>
+              </DbtrAcct>
+              <Cdtr>
+                <Pty>
+                  <Nm>Example Debtor GmbH</Nm>
+                </Pty>
+              </Cdtr>
+              <CdtrAcct>
+                <Id>
+                  <IBAN>DE89370400440532013000</IBAN>
+                </Id>
+              </CdtrAcct>
+            </RltdPties>
+            <RmtInf>
+              <Ustrd>Invoice 2026-0917</Ustrd>
+            </RmtInf>
+          </TxDtls>
+          <TxDtls>
+            <Refs>
+              <EndToEndId>E2E-0002</EndToEndId>
+              <InstrId>INSTR-0002</InstrId>
+              <TxId>TXID-0002</TxId>
+              <UETR>8a562c67-ca16-48ba-b074-65581be6f002</UETR>
+            </Refs>
+            <Amt Ccy="EUR">400.00</Amt>
+            <CdtDbtInd>CRDT</CdtDbtInd>
+            <AmtDtls>
+              <InstdAmt>
+                <Amt Ccy="EUR">400.00</Amt>
+              </InstdAmt>
+            </AmtDtls>
+            <RltdPties>
+              <Dbtr>
+                <Pty>
+                  <Nm>Example Creditor Ltd</Nm>
+                </Pty>
+              </Dbtr>
+              <DbtrAcct>
+                <Id>
+                  <IBAN>DE02120300000000202051</IBAN>
+                </Id>
+              </DbtrAcct>
+              <Cdtr>
+                <Pty>
+                  <Nm>Example Debtor GmbH</Nm>
+                </Pty>
+              </Cdtr>
+              <CdtrAcct>
+                <Id>
+                  <IBAN>DE89370400440532013000</IBAN>
+                </Id>
+              </CdtrAcct>
+            </RltdPties>
+            <RmtInf>
+              <Ustrd>Invoice 2026-0918</Ustrd>
+            </RmtInf>
+          </TxDtls>
+        </NtryDtls>
+        <AddtlNtryInf>Batch collection of two invoices</AddtlNtryInf>
+      </Ntry>
+      <Ntry>
+        <NtryRef>ENTRYREF-0002</NtryRef>
+        <Amt Ccy="EUR">500.00</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <Sts>
+          <Cd>BOOK</Cd>
+        </Sts>
+        <BookgDt>
+          <Dt>2026-08-20</Dt>
+        </BookgDt>
+        <ValDt>
+          <Dt>2026-08-20</Dt>
+        </ValDt>
+        <AcctSvcrRef>ASR-0002</AcctSvcrRef>
+        <BkTxCd>
+          <Domn>
+            <Cd>PMNT</Cd>
+            <Fmly>
+              <Cd>ICDT</Cd>
+              <SubFmlyCd>ESCT</SubFmlyCd>
+            </Fmly>
+          </Domn>
+        </BkTxCd>
+        <NtryDtls>
+          <TxDtls>
+            <Refs>
+              <EndToEndId>E2E-0003</EndToEndId>
+              <InstrId>INSTR-0003</InstrId>
+              <TxId>TXID-0003</TxId>
+              <UETR>8a562c67-ca16-48ba-b074-65581be6f003</UETR>
+            </Refs>
+            <Amt Ccy="EUR">500.00</Amt>
+            <CdtDbtInd>DBIT</CdtDbtInd>
+            <AmtDtls>
+              <InstdAmt>
+                <Amt Ccy="EUR">500.00</Amt>
+              </InstdAmt>
+            </AmtDtls>
+            <RltdPties>
+              <Dbtr>
+                <Pty>
+                  <Nm>Example Debtor GmbH</Nm>
+                  <PstlAdr>
+                    <Ctry>DE</Ctry>
+                    <TwnNm>Frankfurt am Main</TwnNm>
+                    <PstCd>60311</PstCd>
+                  </PstlAdr>
+                  <Id>
+                    <OrgId>
+                      <AnyBIC>COBADEFFXXX</AnyBIC>
+                    </OrgId>
+                  </Id>
+                </Pty>
+              </Dbtr>
+              <DbtrAcct>
+                <Id>
+                  <IBAN>DE89370400440532013000</IBAN>
+                </Id>
+              </DbtrAcct>
+              <Cdtr>
+                <Pty>
+                  <Nm>Example Creditor Ltd</Nm>
+                </Pty>
+              </Cdtr>
+              <CdtrAcct>
+                <Id>
+                  <IBAN>DE02120300000000202051</IBAN>
+                </Id>
+              </CdtrAcct>
+            </RltdPties>
+            <RltdAgts>
+              <DbtrAgt>
+                <FinInstnId>
+                  <BICFI>COBADEFFXXX</BICFI>
+                  <Nm>Commerzbank AG</Nm>
+                </FinInstnId>
+              </DbtrAgt>
+              <CdtrAgt>
+                <FinInstnId>
+                  <BICFI>MARKDEF1100</BICFI>
+                  <Nm>Deutsche Bundesbank</Nm>
+                </FinInstnId>
+              </CdtrAgt>
+            </RltdAgts>
+            <Purp>
+              <Cd>SUPP</Cd>
+            </Purp>
+            <RmtInf>
+              <Strd>
+                <CdtrRefInf>
+                  <Tp>
+                    <CdOrPrtry>
+                      <Cd>SCOR</Cd>
+                    </CdOrPrtry>
+                    <Issr>Example Creditor Ltd</Issr>
+                  </Tp>
+                  <Ref>RF18539007547034</Ref>
+                </CdtrRefInf>
+              </Strd>
+            </RmtInf>
+          </TxDtls>
+        </NtryDtls>
+        <AddtlNtryInf>Outgoing SEPA credit transfer</AddtlNtryInf>
+      </Ntry>
+      <AddtlStmtInf>Statement covers August 2026</AddtlStmtInf>
+    </Stmt>
+    <Stmt>
+      <Id>STMT-0002</Id>
+      <ElctrncSeqNb>13</ElctrncSeqNb>
+      <CreDtTm>2026-09-02T08:05:00</CreDtTm>
+      <FrToDt>
+        <FrDtTm>2026-09-01T00:00:00+02:00</FrDtTm>
+        <ToDtTm>2026-09-01T23:59:59+02:00</ToDtTm>
+      </FrToDt>
+      <CpyDplctInd>CODU</CpyDplctInd>
+      <Acct>
+        <Id>
+          <Othr>
+            <Id>ACCT-0002</Id>
+            <SchmeNm>
+              <Cd>BBAN</Cd>
+            </SchmeNm>
+          </Othr>
+        </Id>
+        <Ccy>EUR</Ccy>
+        <Ownr>
+          <Nm>Example Debtor GmbH</Nm>
+        </Ownr>
+        <Svcr>
+          <FinInstnId>
+            <BICFI>COBADEFFXXX</BICFI>
+            <Nm>Commerzbank AG</Nm>
+          </FinInstnId>
+        </Svcr>
+      </Acct>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>OPBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="EUR">5000.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2026-09-01</Dt>
+        </Dt>
+      </Bal>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>CLBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="EUR">4500.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <Dt>2026-09-01</Dt>
+        </Dt>
+      </Bal>
+      <TxsSummry>
+        <TtlNtries>
+          <NbOfNtries>1</NbOfNtries>
+          <Sum>500.00</Sum>
+          <TtlNetNtry>
+            <Amt>500.00</Amt>
+            <CdtDbtInd>DBIT</CdtDbtInd>
+          </TtlNetNtry>
+        </TtlNtries>
+        <TtlCdtNtries>
+          <NbOfNtries>0</NbOfNtries>
+          <Sum>0.00</Sum>
+        </TtlCdtNtries>
+        <TtlDbtNtries>
+          <NbOfNtries>1</NbOfNtries>
+          <Sum>500.00</Sum>
+        </TtlDbtNtries>
+      </TxsSummry>
+      <Ntry>
+        <NtryRef>ENTRYREF-0003</NtryRef>
+        <Amt Ccy="EUR">500.00</Amt>
+        <CdtDbtInd>DBIT</CdtDbtInd>
+        <RvslInd>true</RvslInd>
+        <Sts>
+          <Cd>BOOK</Cd>
+        </Sts>
+        <BookgDt>
+          <Dt>2026-09-02</Dt>
+        </BookgDt>
+        <ValDt>
+          <Dt>2026-09-02</Dt>
+        </ValDt>
+        <AcctSvcrRef>ASR-0003</AcctSvcrRef>
+        <BkTxCd>
+          <Domn>
+            <Cd>PMNT</Cd>
+            <Fmly>
+              <Cd>RDDT</Cd>
+              <SubFmlyCd>ESDD</SubFmlyCd>
+            </Fmly>
+          </Domn>
+        </BkTxCd>
+        <NtryDtls>
+          <TxDtls>
+            <Refs>
+              <EndToEndId>E2E-0004</EndToEndId>
+              <TxId>TXID-0004</TxId>
+              <MndtId>MANDATE-0001</MndtId>
+              <UETR>8a562c67-ca16-48ba-b074-65581be6f004</UETR>
+            </Refs>
+            <Amt Ccy="EUR">500.00</Amt>
+            <CdtDbtInd>DBIT</CdtDbtInd>
+            <AmtDtls>
+              <InstdAmt>
+                <Amt Ccy="EUR">500.00</Amt>
+              </InstdAmt>
+            </AmtDtls>
+            <RltdPties>
+              <Dbtr>
+                <Pty>
+                  <Nm>Example Debtor GmbH</Nm>
+                </Pty>
+              </Dbtr>
+              <Cdtr>
+                <Pty>
+                  <Nm>Example Creditor Ltd</Nm>
+                </Pty>
+              </Cdtr>
+            </RltdPties>
+            <RtrInf>
+              <OrgnlBkTxCd>
+                <Domn>
+                  <Cd>PMNT</Cd>
+                  <Fmly>
+                    <Cd>ICDT</Cd>
+                    <SubFmlyCd>ESDD</SubFmlyCd>
+                  </Fmly>
+                </Domn>
+              </OrgnlBkTxCd>
+              <Orgtr>
+                <Pty>
+                  <Nm>Example Creditor Ltd</Nm>
+                </Pty>
+              </Orgtr>
+              <Rsn>
+                <Cd>AC04</Cd>
+              </Rsn>
+              <AddtlInf>Account closed</AddtlInf>
+            </RtrInf>
+          </TxDtls>
+        </NtryDtls>
+        <AddtlNtryInf>Returned direct debit</AddtlNtryInf>
+      </Ntry>
+      <AddtlStmtInf>Statement includes one returned direct debit</AddtlStmtInf>
+    </Stmt>
+  </BkToCstmrStmt>
+</Document>

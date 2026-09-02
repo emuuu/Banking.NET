@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.052.001.08">
+  <BkToCstmrAcctRpt>
+    <GrpHdr>
+      <MsgId>MSGID-20260901-0002</MsgId>
+      <CreDtTm>2026-09-01T15:30:00+02:00</CreDtTm>
+    </GrpHdr>
+    <Rpt>
+      <Id>RPT-0001</Id>
+      <CreDtTm>2026-09-01T15:30:00+02:00</CreDtTm>
+      <Acct>
+        <Id>
+          <IBAN>DE89370400440532013000</IBAN>
+        </Id>
+        <Ccy>EUR</Ccy>
+        <Ownr>
+          <Nm>Example Debtor GmbH</Nm>
+        </Ownr>
+        <Svcr>
+          <FinInstnId>
+            <BICFI>COBADEFFXXX</BICFI>
+            <Nm>Commerzbank AG</Nm>
+          </FinInstnId>
+        </Svcr>
+      </Acct>
+      <Bal>
+        <Tp>
+          <CdOrPrtry>
+            <Cd>ITBD</Cd>
+          </CdOrPrtry>
+        </Tp>
+        <Amt Ccy="EUR">10650.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Dt>
+          <DtTm>2026-09-01T15:00:00+02:00</DtTm>
+        </Dt>
+      </Bal>
+      <Ntry>
+        <NtryRef>ENTRYREF-0004</NtryRef>
+        <Amt Ccy="EUR">150.00</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Sts>
+          <Cd>BOOK</Cd>
+        </Sts>
+        <BookgDt>
+          <DtTm>2026-09-01T14:45:00+02:00</DtTm>
+        </BookgDt>
+        <ValDt>
+          <Dt>2026-09-01</Dt>
+        </ValDt>
+        <AcctSvcrRef>ASR-0004</AcctSvcrRef>
+        <BkTxCd>
+          <Domn>
+            <Cd>PMNT</Cd>
+            <Fmly>
+              <Cd>RCDT</Cd>
+              <SubFmlyCd>ESCT</SubFmlyCd>
+            </Fmly>
+          </Domn>
+        </BkTxCd>
+      </Ntry>
+    </Rpt>
+  </BkToCstmrAcctRpt>
+</Document>

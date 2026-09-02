@@ -1,0 +1,191 @@
+using System.Text;
+using Commerzbank.NET.CorporatePayments.Iso20022;
+using Commerzbank.NET.Tests.Iso20022.Common;
+using Shouldly;
+using Xunit;
+
+namespace Commerzbank.NET.Tests.Iso20022.Camt;
+
+public class Camt086ReaderTests
+{
+    [Fact]
+    public void Read_Sample_ReadsHeader()
+    {
+        var message = CamtReaderTestHelpers.ReadCamt086Sample();
+
+        message.Identifier.Type.ShouldBe(Iso20022MessageType.Camt086);
+        message.Identifier.Identifier.ShouldBe("camt.086.001.02");
+        message.ReportId.ShouldBe("BILLRPT-0001");
+        message.PageNumber.ShouldBe(1);
+        message.LastPageIndicator.ShouldBe(true);
+        message.Source.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void Read_Sample_ReadsGroupAndSenderReceiver()
+    {
+        var message = CamtReaderTestHelpers.ReadCamt086Sample();
+
+        message.Groups.Count.ShouldBe(1);
+        var group = message.Groups[0];
+        group.GroupId.ShouldBe("BILLGRP-0001");
+        group.Sender.ShouldNotBeNull();
+        group.Sender!.Name.ShouldBe("Commerzbank AG");
+        group.Receiver.ShouldNotBeNull();
+        group.Receiver!.Name.ShouldBe("Example Debtor GmbH");
+        group.Statements.Count.ShouldBe(1);
+        group.Source.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void Read_Sample_ReadsStatementHeaderAndAccount()
+    {
+        var statement = CamtReaderTestHelpers.ReadCamt086Sample().Groups[0].Statements[0];
+
+        statement.StatementId.ShouldBe("BILLSTMT-0001");
+        statement.FromDate.ShouldBe(new DateOnly(2026, 8, 1));
+        statement.ToDate.ShouldBe(new DateOnly(2026, 8, 31));
+        statement.CreationDateTime.ShouldBe(new DateTimeOffset(2026, 9, 1, 9, 0, 0, TimeSpan.FromHours(2)));
+        statement.Status.ShouldBe("FINL");
+        statement.AccountLevel.ShouldBe("STMT");
+        statement.Account.ShouldNotBeNull();
+        statement.Account!.Iban.ShouldBe("DE89370400440532013000");
+        statement.AccountServicer.ShouldNotBeNull();
+        statement.AccountServicer!.Bic.ShouldBe("COBADEFFXXX");
+        statement.AccountServicer.Name.ShouldBe("Commerzbank AG");
+        statement.AccountBalanceCurrency.ShouldBe("EUR");
+        statement.SettlementCurrency.ShouldBe("EUR");
+        statement.HostCurrency.ShouldBe("EUR");
+        statement.Source.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void Read_Sample_ReadsBalance()
+    {
+        var statement = CamtReaderTestHelpers.ReadCamt086Sample().Groups[0].Statements[0];
+
+        statement.Balances.Count.ShouldBe(1);
+        var balance = statement.Balances[0];
+        balance.TypeCode.ShouldBe("CLBD");
+        balance.Amount.ShouldBe(new Money(45.90m, "EUR"));
+        balance.CreditDebit.ShouldBe(CreditDebitIndicator.Debit);
+        balance.Source.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void Read_Sample_ReadsThreeServices()
+    {
+        var statement = CamtReaderTestHelpers.ReadCamt086Sample().Groups[0].Statements[0];
+        statement.Services.Count.ShouldBe(3);
+
+        var accountMaintenance = statement.Services[0];
+        accountMaintenance.ServiceId.ShouldBe("ACCTMAINT");
+        accountMaintenance.SubServiceCode.ShouldBe("MONTHLY");
+        accountMaintenance.SubServiceIssuer.ShouldBe("BANK");
+        accountMaintenance.Description.ShouldBe("Account maintenance fee");
+        accountMaintenance.CommonCode.ShouldBe("A001");
+        accountMaintenance.ServiceType.ShouldBe("STAN");
+        accountMaintenance.BankTransactionCode.ShouldNotBeNull();
+        accountMaintenance.BankTransactionCode!.Domain.ShouldBe("ACMT");
+        accountMaintenance.BankTransactionCode.Family.ShouldBe("SVCC");
+        accountMaintenance.BankTransactionCode.SubFamily.ShouldBe("FEES");
+        accountMaintenance.Volume.ShouldBe(1m);
+        accountMaintenance.PriceCurrency.ShouldBe("EUR");
+        accountMaintenance.UnitPrice.ShouldBe(new Money(15.00m, "EUR"));
+        accountMaintenance.PriceMethod.ShouldBe("FLAT");
+        accountMaintenance.PaymentMethod.ShouldBe("DDBT");
+        accountMaintenance.OriginalChargePrice.ShouldBe(new Money(15.00m, "EUR"));
+        accountMaintenance.OriginalChargeSettlementAmount.ShouldBe(new Money(15.00m, "EUR"));
+        accountMaintenance.TaxDesignation.ShouldBe("TAXB");
+        accountMaintenance.Source.ShouldNotBeNull();
+
+        var wireTransfer = statement.Services[1];
+        wireTransfer.ServiceId.ShouldBe("WIRETRANSFER");
+        wireTransfer.Description.ShouldBe("Outgoing wire transfer fee");
+        wireTransfer.Volume.ShouldBe(5m);
+        wireTransfer.UnitPrice.ShouldBe(new Money(5.00m, "EUR"));
+        wireTransfer.OriginalChargePrice.ShouldBe(new Money(25.00m, "EUR"));
+
+        var statementPrint = statement.Services[2];
+        statementPrint.ServiceId.ShouldBe("STMTPRINT");
+        statementPrint.Description.ShouldBe("Paper statement fee");
+        statementPrint.TaxDesignation.ShouldBe("EXMPT");
+        statementPrint.OriginalChargePrice.ShouldBe(new Money(5.90m, "EUR"));
+    }
+
+    [Fact]
+    public void Read_Sample_ReadsTaxRegion()
+    {
+        var statement = CamtReaderTestHelpers.ReadCamt086Sample().Groups[0].Statements[0];
+
+        statement.TaxRegions.Count.ShouldBe(1);
+        var region = statement.TaxRegions[0];
+        region.RegionNumber.ShouldBe("DE");
+        region.RegionName.ShouldBe("Germany");
+        region.CustomerTaxId.ShouldBe("DE123456789");
+        region.TotalTaxAmount.ShouldBe(new Money(8.72m, "EUR"));
+        region.Source.ShouldNotBeNull();
+    }
+
+    [Fact]
+    public void Read_RootWithoutRecognizedChild_ThrowsValidationException()
+    {
+        const string xml = "<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:camt.086.001.02\"><SomethingElse/></Document>";
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => Camt086Reader.Read(xml));
+        exception.Message.ShouldContain("BkSvcsBllgStmt");
+        exception.Message.ShouldContain("SomethingElse");
+        exception.Path.ShouldBe("Document/BkSvcsBllgStmt");
+    }
+
+    [Fact]
+    public void Read_RootNotNamedDocument_ThrowsValidationExceptionWithDocumentPath()
+    {
+        const string xml = "<Foo xmlns=\"urn:iso:std:iso:20022:tech:xsd:camt.086.001.02\"><BkSvcsBllgStmt><RptHdr><RptId>BILLRPT-1</RptId></RptHdr></BkSvcsBllgStmt></Foo>";
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => Camt086Reader.Read(xml));
+        exception.Path.ShouldBe("Document");
+    }
+
+    [Fact]
+    public void Read_BalanceWithoutAmt_ThrowsValidationExceptionWithPath()
+    {
+        const string xml = """
+            <Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.086.001.02">
+              <BkSvcsBllgStmt>
+                <BllgStmtGrp>
+                  <BllgStmt>
+                    <StmtId>BILLSTMT-1</StmtId>
+                    <Bal>
+                      <Tp><Cd>CLBD</Cd></Tp>
+                      <CdtDbtInd>DBIT</CdtDbtInd>
+                    </Bal>
+                  </BllgStmt>
+                </BllgStmtGrp>
+              </BkSvcsBllgStmt>
+            </Document>
+            """;
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => Camt086Reader.Read(xml));
+        exception.Path.ShouldBe("BllgStmt/Bal/Val/Amt");
+    }
+
+    [Fact]
+    public void Read_StreamAndString_ProduceEquivalentResults()
+    {
+        var xml = SampleXml.Load("camt.086.001.02-sample.xml");
+        using var stream = new MemoryStream(Encoding.UTF8.GetBytes(xml));
+
+        var fromString = Camt086Reader.Read(xml);
+        var fromStream = Camt086Reader.Read(stream);
+
+        fromStream.ReportId.ShouldBe(fromString.ReportId);
+        fromStream.Groups[0].Statements[0].Services.Count.ShouldBe(fromString.Groups[0].Statements[0].Services.Count);
+    }
+}
+
+internal static class CamtReaderTestHelpers
+{
+    public static BankServicesBillingMessage ReadCamt086Sample() =>
+        Camt086Reader.Read(SampleXml.Load("camt.086.001.02-sample.xml"));
+}

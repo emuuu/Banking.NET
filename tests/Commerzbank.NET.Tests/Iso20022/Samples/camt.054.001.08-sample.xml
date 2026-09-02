@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.054.001.08">
+  <BkToCstmrDbtCdtNtfctn>
+    <GrpHdr>
+      <MsgId>MSGID-20260901-0003</MsgId>
+      <CreDtTm>2026-09-01T16:00:00+02:00</CreDtTm>
+    </GrpHdr>
+    <Ntfctn>
+      <Id>NTFCTN-0001</Id>
+      <CreDtTm>2026-09-01T16:00:00+02:00</CreDtTm>
+      <Acct>
+        <Id>
+          <IBAN>DE89370400440532013000</IBAN>
+        </Id>
+        <Ccy>EUR</Ccy>
+        <Ownr>
+          <Nm>Example Debtor GmbH</Nm>
+        </Ownr>
+        <Svcr>
+          <FinInstnId>
+            <BICFI>COBADEFFXXX</BICFI>
+            <Nm>Commerzbank AG</Nm>
+          </FinInstnId>
+        </Svcr>
+      </Acct>
+      <Ntry>
+        <NtryRef>ENTRYREF-0005</NtryRef>
+        <Amt Ccy="EUR">275.50</Amt>
+        <CdtDbtInd>CRDT</CdtDbtInd>
+        <Sts>
+          <Cd>BOOK</Cd>
+        </Sts>
+        <BookgDt>
+          <DtTm>2026-09-01T15:55:00+02:00</DtTm>
+        </BookgDt>
+        <ValDt>
+          <Dt>2026-09-01</Dt>
+        </ValDt>
+        <AcctSvcrRef>ASR-0005</AcctSvcrRef>
+        <BkTxCd>
+          <Domn>
+            <Cd>PMNT</Cd>
+            <Fmly>
+              <Cd>RCDT</Cd>
+              <SubFmlyCd>ESCT</SubFmlyCd>
+            </Fmly>
+          </Domn>
+        </BkTxCd>
+        <NtryDtls>
+          <TxDtls>
+            <Refs>
+              <EndToEndId>E2E-0005</EndToEndId>
+              <TxId>TXID-0005</TxId>
+              <UETR>8a562c67-ca16-48ba-b074-65581be6f005</UETR>
+            </Refs>
+            <RltdPties>
+              <Dbtr>
+                <Pty>
+                  <Nm>Example Creditor Ltd</Nm>
+                </Pty>
+              </Dbtr>
+              <Cdtr>
+                <Pty>
+                  <Nm>Example Debtor GmbH</Nm>
+                </Pty>
+              </Cdtr>
+            </RltdPties>
+            <RmtInf>
+              <Ustrd>Advance notice of incoming payment</Ustrd>
+            </RmtInf>
+          </TxDtls>
+        </NtryDtls>
+      </Ntry>
+    </Ntfctn>
+  </BkToCstmrDbtCdtNtfctn>
+</Document>

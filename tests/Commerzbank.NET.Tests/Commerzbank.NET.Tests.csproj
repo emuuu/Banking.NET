@@ -29,4 +29,8 @@
     <ProjectReference Include="..\..\src\Commerzbank.NET\Commerzbank.NET.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Iso20022/Samples/**" />
+  </ItemGroup>
+
 </Project>
