@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>$(LibraryTargetFrameworks)</TargetFrameworks>
+    <PackageId>Commerzbank.NET</PackageId>
+    <RootNamespace>Commerzbank.NET</RootNamespace>
+    <AssemblyName>Commerzbank.NET</AssemblyName>
+    <Description>A .NET client library for the Commerzbank Corporate Payments API: OAuth client credentials, mutual TLS, EBICS order types, fragmented downloads and ISO 20022 (camt, pain) readers and writers.</Description>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <UseRepoReadmeInPackage>false</UseRepoReadmeInPackage>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <None Include="NUGET_README.md" Pack="true" PackagePath="README.md" Condition="Exists('NUGET_README.md')" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Extensions.Http" />
+    <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="Commerzbank.NET.Tests" />
+  </ItemGroup>
+
+</Project>

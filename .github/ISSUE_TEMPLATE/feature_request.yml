@@ -1,0 +1,26 @@
+name: Feature Request
+description: Suggest a new feature for Commerzbank.NET
+labels: [enhancement]
+body:
+  - type: textarea
+    id: description
+    attributes:
+      label: Feature Description
+      description: A clear description of the feature you'd like.
+    validations:
+      required: true
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Use Case / Motivation
+      description: Why is this feature needed? What problem does it solve?
+    validations:
+      required: true
+  - type: textarea
+    id: api-example
+    attributes:
+      label: Desired API / Example Code
+      description: If applicable, show how you'd like to use this feature.
+      render: csharp
+    validations:
+      required: false

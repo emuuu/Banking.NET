@@ -1,0 +1,43 @@
+name: Deploy Docs
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'docs/Commerzbank.NET.Docs/**'
+      - 'docs/Commerzbank.NET.Docs.Generator/**'
+      - 'src/Commerzbank.NET/**'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - name: Publish docs app
+        run: dotnet publish docs/Commerzbank.NET.Docs/Commerzbank.NET.Docs.csproj -c Release -o output
+      - name: Rewrite base href
+        run: |
+          sed -i 's|<base href="/" />|<base href="/Commerzbank.NET/" />|g' output/wwwroot/index.html
+          if [ -f output/wwwroot/404.html ]; then
+            sed -i 's|<base href="/" />|<base href="/Commerzbank.NET/" />|g' output/wwwroot/404.html
+          fi
+      - uses: actions/upload-pages-artifact@v5
+        with:
+          path: output/wwwroot
+      - id: deployment
+        uses: actions/deploy-pages@v5

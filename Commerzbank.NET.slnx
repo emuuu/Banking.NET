@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Commerzbank.NET/Commerzbank.NET.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Commerzbank.NET.Tests/Commerzbank.NET.Tests.csproj" />
+  </Folder>
+</Solution>

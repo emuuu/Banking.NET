@@ -1,0 +1,33 @@
+<Project>
+  <!--
+    Target frameworks are declared once. LibraryTargetFrameworks is the list the NuGet package is built for;
+    ToolsTargetFramework is the single framework used by tests, samples and the docs site.
+    Add a new framework here when it ships; nothing else needs to change.
+  -->
+  <PropertyGroup>
+    <LibraryTargetFrameworks>net10.0</LibraryTargetFrameworks>
+    <ToolsTargetFramework>net10.0</ToolsTargetFramework>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(CI)' != ''">true</ContinuousIntegrationBuild>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <VersionPrefix>1.0.0</VersionPrefix>
+    <Authors>Timm Bremekamp</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/emuuu/Commerzbank.NET</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/emuuu/Commerzbank.NET</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>commerzbank;corporate-payments;ebics;iso20022;sepa;camt;pain;banking;api;client</PackageTags>
+    <Copyright>Copyright (c) 2026 Timm Bremekamp</Copyright>
+    <Description>A .NET client library for the Commerzbank Corporate Payments API.</Description>
+  </PropertyGroup>
+</Project>
