@@ -32,7 +32,7 @@ public class CommerzbankAuthHandlerTests
         };
 
     [Fact]
-    public async Task SendAsync_AttachesBearerToken()
+    public async Task SendAsync_OutgoingRequest_AttachesBearerToken()
     {
         var innerHandler = new ScriptedHttpMessageHandler().Enqueue(new HttpResponseMessage(HttpStatusCode.OK));
         var tokenProvider = TokenProviderReturning("token1");
@@ -152,7 +152,7 @@ public class CommerzbankAuthHandlerTests
     }
 
     [Fact]
-    public async Task CloneAsync_CopiesMethodUriHeadersAndContent()
+    public async Task CloneAsync_RequestWithContent_CopiesMethodUriHeadersAndContent()
     {
         using var original = new HttpRequestMessage(HttpMethod.Post, "https://api.example.com/messages")
         {

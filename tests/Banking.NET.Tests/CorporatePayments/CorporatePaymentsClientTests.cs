@@ -89,7 +89,7 @@ public class CorporatePaymentsClientTests
     }
 
     [Fact]
-    public async Task HeartbeatAsync_RequestsHeartbeatEndpoint()
+    public async Task HeartbeatAsync_SuccessResponse_RequestsHeartbeatEndpoint()
     {
         var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.OK));
         var client = CreateClient(handler);
@@ -182,7 +182,7 @@ public class CorporatePaymentsClientTests
     }
 
     [Fact]
-    public async Task DownloadFragmentAsync_RequestsExplicitFragmentQuery()
+    public async Task DownloadFragmentAsync_FragmentIndexGiven_RequestsExplicitFragmentQuery()
     {
         var handler = new MockHttpMessageHandler(ByteResponse(HttpStatusCode.OK, []));
         var client = CreateClient(handler);
@@ -193,7 +193,7 @@ public class CorporatePaymentsClientTests
     }
 
     [Fact]
-    public async Task DownloadFragmentAsync_EscapesMessageId()
+    public async Task DownloadFragmentAsync_MessageIdWithSpecialCharacters_EscapesMessageId()
     {
         var handler = new MockHttpMessageHandler(ByteResponse(HttpStatusCode.OK, []));
         var client = CreateClient(handler);
@@ -397,7 +397,7 @@ public class CorporatePaymentsClientTests
     }
 
     [Fact]
-    public async Task DownloadMessageAsync_ContentTypeIsTakenFromFirstResponse()
+    public async Task DownloadMessageAsync_MultipleFragmentsWithDifferentContentTypes_ContentTypeIsTakenFromFirstResponse()
     {
         var handler = new ScriptedHttpMessageHandler()
             .Enqueue(ByteResponse(HttpStatusCode.PartialContent, "a"u8.ToArray(), "application/xml"))
@@ -592,6 +592,30 @@ public class CorporatePaymentsClientTests
         result.StatusCode.ShouldBe(HttpStatusCode.Created);
         result.Location.ShouldBe(location);
         result.RawResponse.ShouldBe("submitted");
+    }
+
+    [Fact]
+    public async Task SubmitOrderAsync_ResponseWithCorrelationIdHeader_ReturnsCorrelationId()
+    {
+        var response = new HttpResponseMessage(HttpStatusCode.Created);
+        response.Headers.Add("X-CorrelationID", "corr-submit-1");
+        var handler = new MockHttpMessageHandler(response);
+        var client = CreateClient(handler);
+
+        var result = await client.SubmitOrderAsync(OrderType.CCT, "<Document/>");
+
+        result.CorrelationId.ShouldBe("corr-submit-1");
+    }
+
+    [Fact]
+    public async Task SubmitOrderAsync_ResponseWithoutCorrelationIdHeader_ReturnsNull()
+    {
+        var handler = new MockHttpMessageHandler(new HttpResponseMessage(HttpStatusCode.Created));
+        var client = CreateClient(handler);
+
+        var result = await client.SubmitOrderAsync(OrderType.CCT, "<Document/>");
+
+        result.CorrelationId.ShouldBeNull();
     }
 
     [Fact]

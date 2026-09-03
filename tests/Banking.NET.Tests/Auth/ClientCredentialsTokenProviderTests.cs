@@ -298,7 +298,7 @@ public class ClientCredentialsTokenProviderTests
     }
 
     [Fact]
-    public async Task GetAccessTokenAsync_UsesHttpClientFactoryConstructorOverload()
+    public async Task GetAccessTokenAsync_FactoryConstructorOverload_CreatesClientFromFactory()
     {
         var handler = new ScriptedHttpMessageHandler().Enqueue(TokenResponse("token1"));
         using var httpClient = new HttpClient(handler);

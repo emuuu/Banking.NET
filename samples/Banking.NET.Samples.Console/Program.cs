@@ -5,12 +5,21 @@
 //   dotnet run --project samples/Banking.NET.Samples.Console
 //   dotnet run --project samples/Banking.NET.Samples.Console -- --confirm --submit-sample
 
+using System.Net.Http;
 using Banking.NET.Commerzbank;
 using Banking.NET.Commerzbank.CorporatePayments;
 using Banking.NET.Commerzbank.CorporatePayments.Iso20022;
 using Banking.NET.Commerzbank.Exceptions;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+
+using var cts = new CancellationTokenSource();
+Console.CancelKeyPress += (_, e) =>
+{
+    e.Cancel = true;
+    cts.Cancel();
+};
+var cancellationToken = cts.Token;
 
 var configuration = new ConfigurationBuilder().AddEnvironmentVariables().Build();
 var clientId = configuration["COMMERZBANK_SANDBOX_CLIENT_ID"];
@@ -40,10 +49,10 @@ var client = provider.GetRequiredService<ICorporatePaymentsClient>();
 
 try
 {
-    await client.HeartbeatAsync();
+    await client.HeartbeatAsync(cancellationToken);
     Console.WriteLine("Heartbeat OK.");
 
-    var messages = await client.ListMessagesAsync();
+    var messages = await client.ListMessagesAsync(cancellationToken: cancellationToken);
     Console.WriteLine();
     Console.WriteLine($"{messages.Count} message(s) waiting:");
     Console.WriteLine($"{"MessageId",-36} {"OrderType",-9} {"Fragments",-9} Size");
@@ -52,8 +61,10 @@ try
 
     foreach (var info in messages)
     {
-        var message = await client.DownloadMessageAsync(info);
-        var identifier = Iso20022Document.Identify(Iso20022Document.Load(message.OpenContentStream()));
+        var message = await client.DownloadMessageAsync(info, cancellationToken);
+        Iso20022MessageIdentifier identifier;
+        using (var contentStream = message.OpenContentStream())
+            identifier = Iso20022Document.Identify(Iso20022Document.Load(contentStream));
         Console.WriteLine();
         Console.WriteLine($"{info.MessageId} ({identifier.Identifier}):");
 
@@ -66,7 +77,7 @@ try
             case Iso20022MessageType.Camt054:
                 var bankToCustomerMessage = CamtReader.Read(message);
                 foreach (var statement in bankToCustomerMessage.Statements)
-                    Console.WriteLine($"  Account {statement.Account?.Iban}: {statement.Balances.Count} balance(s), {statement.Entries.Count} entrie(s)");
+                    Console.WriteLine($"  Account {statement.Account?.Iban}: {statement.Balances.Count} balance(s), {statement.Entries.Count} entry/entries");
                 break;
 
             case Iso20022MessageType.Pain002:
@@ -83,7 +94,7 @@ try
         // the safe default for a sample that may be run more than once.
         if (confirm)
         {
-            await client.ConfirmMessageAsync(info.MessageId);
+            await client.ConfirmMessageAsync(info.MessageId, cancellationToken: cancellationToken);
             Console.WriteLine("  Confirmed.");
         }
     }
@@ -93,14 +104,29 @@ try
         Console.WriteLine();
         var initiation = BuildSampleCreditTransfer();
         var xml = Pain001Writer.WriteToString(initiation, Pain001Version.V09);
-        var result = await client.SubmitOrderAsync(OrderType.CCT, xml);
+        var result = await client.SubmitOrderAsync(OrderType.CCT, xml, cancellationToken: cancellationToken);
         Console.WriteLine($"Submitted sample CCT order: {result.StatusCode}");
     }
+}
+catch (Iso20022ValidationException ex)
+{
+    Console.Error.WriteLine($"ISO 20022 validation error: {ex.Message} (path {ex.Path})");
+    return 1;
 }
 catch (CommerzbankException ex)
 {
     Console.Error.WriteLine($"API error: {ex.Message} (status {ex.StatusCode}, correlation {ex.CorrelationId})");
     return 1;
+}
+catch (HttpRequestException ex)
+{
+    Console.Error.WriteLine($"HTTP error: {ex.Message}");
+    return 1;
+}
+catch (OperationCanceledException)
+{
+    Console.Error.WriteLine("cancelled");
+    return 130;
 }
 
 return 0;

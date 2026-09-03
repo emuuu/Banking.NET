@@ -82,7 +82,7 @@ public class CommerzbankErrorHandlerTests
     }
 
     [Fact]
-    public async Task CreateExceptionAsync_SetsStatusCodeAndCorrelationIdFromHeader()
+    public async Task CreateExceptionAsync_NotFoundWithCorrelationId_SetsStatusCodeAndCorrelationId()
     {
         using var response = Response(HttpStatusCode.NotFound, correlationId: "Id-abc123");
         var exception = await CommerzbankErrorHandler.CreateExceptionAsync(response, CancellationToken.None);
@@ -92,7 +92,7 @@ public class CommerzbankErrorHandlerTests
     }
 
     [Fact]
-    public async Task CreateExceptionAsync_UsesErrorDescriptionFromChallengeAsDetail()
+    public async Task CreateExceptionAsync_BearerChallengeWithErrorDescription_UsesErrorDescriptionAsDetail()
     {
         using var response = Response(HttpStatusCode.Unauthorized, body: "ignored body", bearerChallenge: "realm=\"DefaultRealm\", error=\"invalid_token\", error_description=\"The access token expired\"");
         var exception = await CommerzbankErrorHandler.CreateExceptionAsync(response, CancellationToken.None);
@@ -101,7 +101,7 @@ public class CommerzbankErrorHandlerTests
     }
 
     [Fact]
-    public async Task CreateExceptionAsync_TruncatesBodyDetailTo500Characters()
+    public async Task CreateExceptionAsync_BodyLongerThan500Characters_TruncatesDetailTo500Characters()
     {
         var longBody = new string('x', 600);
         using var response = Response(HttpStatusCode.InternalServerError, body: longBody);

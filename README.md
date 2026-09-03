@@ -154,10 +154,11 @@ await foreach (var message in client.FetchMessagesAsync(OrderType.C53))
 }
 ```
 
-If confirmation itself fails, the already-downloaded message is not lost — it is attached to the thrown `MessageConfirmationException`. Confirmation can also be done manually, e.g. after only partially reading a message:
+If confirmation itself fails, the already-downloaded message is not lost — it is attached to the thrown `MessageConfirmationException`. Confirmation can also be done manually. `ReceivedStatus.Partial` is for callers driving their own fragment loop via `DownloadFragmentAsync` and stopping before the last fragment — `DownloadMessageAsync` itself always retrieves every fragment, so a message it returns is always complete:
 
 ```csharp
-var message = await client.DownloadMessageAsync(messageId);
+await client.DownloadFragmentAsync(messageId, 0);
+// ... loop abandoned before the last fragment ...
 await client.ConfirmMessageAsync(messageId, ReceivedStatus.Partial);
 ```
 
@@ -180,7 +181,7 @@ var bankToCustomerMessage = CamtReader.Read(message);
 
 foreach (var statement in bankToCustomerMessage.Statements)
 {
-    Console.WriteLine($"{statement.Account?.Iban}: {statement.Balances.Count} balance(s), {statement.Entries.Count} entrie(s)");
+    Console.WriteLine($"{statement.Account?.Iban}: {statement.Balances.Count} balance(s), {statement.Entries.Count} entry/entries");
 }
 ```
 
@@ -263,7 +264,7 @@ var xml = Pain008Writer.WriteToString(initiation, Pain008Version.V08);
 await client.SubmitOrderAsync(OrderType.CDD, xml);
 ```
 
-Every reader and writer also accepts raw XML (`string`/`Stream`/`XDocument`) directly, independent of the Corporate Payments client — useful for testing or offline processing.
+Every reader also accepts an `XDocument`, `Stream`, `string` or `CorporatePaymentsMessage` directly, independent of the Corporate Payments client — useful for testing or offline processing. Writers take the corresponding model type and a version, and produce the XML.
 
 ## Error Handling
 

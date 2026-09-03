@@ -80,7 +80,7 @@ public interface ICorporatePaymentsClient
     /// <exception cref="CommerzbankApiException">The gateway returned an unsuccessful status not covered by a more specific exception.</exception>
     Task ConfirmMessageAsync(string messageId, ReceivedStatus status = ReceivedStatus.Complete, CancellationToken cancellationToken = default);
 
-    /// <summary>Submits an order from a stream.</summary>
+    /// <summary>Submits an order from a stream. Content that already starts with the gzip magic bytes is sent as `application/gzip` and never compressed again, regardless of <paramref name="compress"/>.</summary>
     /// <param name="orderType">The order type to submit; must be an upload order type.</param>
     /// <param name="content">The order content (a pain.001 or pain.008 document).</param>
     /// <param name="compress">Whether to gzip-compress the content before submitting it. Defaults to false.</param>
@@ -104,7 +104,7 @@ public interface ICorporatePaymentsClient
     /// <exception cref="CommerzbankApiException">The gateway returned an unsuccessful status not covered by a more specific exception.</exception>
     Task<OrderSubmissionResult> SubmitOrderAsync(OrderType orderType, byte[] content, bool compress = false, CancellationToken cancellationToken = default);
 
-    /// <summary>Submits an order from an XML string, encoded as UTF-8 without a byte order mark.</summary>
+    /// <summary>Submits an order from an XML string, encoded as UTF-8 without a byte order mark. The gzip magic-bytes check and <paramref name="compress"/> apply to those UTF-8-encoded bytes, not the original text.</summary>
     /// <param name="orderType">The order type to submit; must be an upload order type.</param>
     /// <param name="xml">The order content (a pain.001 or pain.008 document) as XML text.</param>
     /// <param name="compress">Whether to gzip-compress the content before submitting it. Defaults to false.</param>

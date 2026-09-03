@@ -205,7 +205,7 @@ public class CommerzbankServiceCollectionExtensionsTests
     }
 
     [Fact]
-    public void AddCommerzbank_RegistersAuthHandlerAsTransient()
+    public void AddCommerzbank_ValidServices_RegistersAuthHandlerAsTransient()
     {
         var services = ValidServices();
         var descriptor = services.SingleOrDefault(sd => sd.ServiceType == typeof(CommerzbankAuthHandler));

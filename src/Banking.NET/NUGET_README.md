@@ -58,7 +58,7 @@ var message = await client.DownloadMessageAsync(messageId);
 var bankToCustomerMessage = CamtReader.Read(message);
 
 foreach (var statement in bankToCustomerMessage.Statements)
-    Console.WriteLine($"{statement.Account?.Iban}: {statement.Balances.Count} balance(s), {statement.Entries.Count} entrie(s)");
+    Console.WriteLine($"{statement.Account?.Iban}: {statement.Balances.Count} balance(s), {statement.Entries.Count} entry/entries");
 ```
 
 ## Error Handling

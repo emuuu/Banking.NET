@@ -351,7 +351,7 @@ public sealed class CorporatePaymentsClient : ICorporatePaymentsClient
         await CommerzbankErrorHandler.EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
 
         var rawResponse = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
-        return new OrderSubmissionResult(response.StatusCode, response.Headers.Location, string.IsNullOrEmpty(rawResponse) ? null : rawResponse);
+        return new OrderSubmissionResult(response.StatusCode, response.Headers.Location, string.IsNullOrEmpty(rawResponse) ? null : rawResponse, CommerzbankErrorHandler.GetCorrelationId(response));
     }
 
     private static bool IsGzip(byte[] content) => content.Length >= 2 && content[0] == 0x1F && content[1] == 0x8B;

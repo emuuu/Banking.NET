@@ -19,7 +19,7 @@ public class CorporatePaymentsBuilderExtensionsTests
     }
 
     [Fact]
-    public void AddCorporatePayments_RegistersResolvableClient()
+    public void AddCorporatePayments_ValidBuilder_RegistersResolvableClient()
     {
         var builder = ValidBuilder();
         builder.AddCorporatePayments();
@@ -31,7 +31,7 @@ public class CorporatePaymentsBuilderExtensionsTests
     }
 
     [Fact]
-    public void AddCorporatePayments_ClientUsesSandboxBaseAddress()
+    public void AddCorporatePayments_ValidBuilder_ClientUsesSandboxBaseAddress()
     {
         var builder = ValidBuilder();
         builder.AddCorporatePayments();
@@ -43,7 +43,7 @@ public class CorporatePaymentsBuilderExtensionsTests
     }
 
     [Fact]
-    public void AddCorporatePayments_ReturnsSameBuilderForChaining()
+    public void AddCorporatePayments_ValidBuilder_ReturnsSameBuilderForChaining()
     {
         var builder = ValidBuilder();
 

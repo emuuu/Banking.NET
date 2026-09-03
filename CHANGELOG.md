@@ -26,7 +26,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - `Camt086Reader` for camt.086 (bank services billing statement), covering the base structure.
 - `Pain002Reader` for pain.002 (customer payment status report), schema versions .03 and .10.
 - `Iso20022Document.Identify` to detect a document's message type and schema version from its XML namespace before choosing a reader.
-- Namespace-agnostic parsing (matched by local element name); every model exposes the source `XElement` for fields not mapped to strongly typed properties.
+- Namespace-agnostic parsing (matched by local element name); every reader model exposes the source `XElement` for fields not mapped to strongly typed properties.
 
 **ISO 20022 — Writing**
 - `Pain001Writer` for pain.001 (customer credit transfer initiation), schema versions .03 and .09.

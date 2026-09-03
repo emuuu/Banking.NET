@@ -6,4 +6,5 @@ namespace Banking.NET.Commerzbank.CorporatePayments;
 /// <param name="StatusCode">The HTTP status code returned by the gateway, typically 201 Created.</param>
 /// <param name="Location">The `Location` response header, if present. The sandbox returns 201 Created without this header, so it is regularly null there.</param>
 /// <param name="RawResponse">The raw response body, if any. The sandbox returns 201 Created with an empty body, so it is regularly null there.</param>
-public sealed record OrderSubmissionResult(HttpStatusCode StatusCode, Uri? Location, string? RawResponse);
+/// <param name="CorrelationId">The `X-CorrelationID` response header, if present; null when the gateway did not return one.</param>
+public sealed record OrderSubmissionResult(HttpStatusCode StatusCode, Uri? Location, string? RawResponse, string? CorrelationId = null);
