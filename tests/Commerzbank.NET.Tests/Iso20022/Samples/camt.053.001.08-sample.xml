@@ -113,10 +113,10 @@
           </Btch>
           <TxDtls>
             <Refs>
-              <EndToEndId>E2E-0001</EndToEndId>
               <InstrId>INSTR-0001</InstrId>
-              <TxId>TXID-0001</TxId>
+              <EndToEndId>E2E-0001</EndToEndId>
               <UETR>8a562c67-ca16-48ba-b074-65581be6f001</UETR>
+              <TxId>TXID-0001</TxId>
             </Refs>
             <Amt Ccy="EUR">600.00</Amt>
             <CdtDbtInd>CRDT</CdtDbtInd>
@@ -153,10 +153,10 @@
           </TxDtls>
           <TxDtls>
             <Refs>
-              <EndToEndId>E2E-0002</EndToEndId>
               <InstrId>INSTR-0002</InstrId>
-              <TxId>TXID-0002</TxId>
+              <EndToEndId>E2E-0002</EndToEndId>
               <UETR>8a562c67-ca16-48ba-b074-65581be6f002</UETR>
+              <TxId>TXID-0002</TxId>
             </Refs>
             <Amt Ccy="EUR">400.00</Amt>
             <CdtDbtInd>CRDT</CdtDbtInd>
@@ -220,10 +220,10 @@
         <NtryDtls>
           <TxDtls>
             <Refs>
-              <EndToEndId>E2E-0003</EndToEndId>
               <InstrId>INSTR-0003</InstrId>
-              <TxId>TXID-0003</TxId>
+              <EndToEndId>E2E-0003</EndToEndId>
               <UETR>8a562c67-ca16-48ba-b074-65581be6f003</UETR>
+              <TxId>TXID-0003</TxId>
             </Refs>
             <Amt Ccy="EUR">500.00</Amt>
             <CdtDbtInd>DBIT</CdtDbtInd>
@@ -237,9 +237,9 @@
                 <Pty>
                   <Nm>Example Debtor GmbH</Nm>
                   <PstlAdr>
-                    <Ctry>DE</Ctry>
-                    <TwnNm>Frankfurt am Main</TwnNm>
                     <PstCd>60311</PstCd>
+                    <TwnNm>Frankfurt am Main</TwnNm>
+                    <Ctry>DE</Ctry>
                   </PstlAdr>
                   <Id>
                     <OrgId>
@@ -399,9 +399,9 @@
           <TxDtls>
             <Refs>
               <EndToEndId>E2E-0004</EndToEndId>
+              <UETR>8a562c67-ca16-48ba-b074-65581be6f004</UETR>
               <TxId>TXID-0004</TxId>
               <MndtId>MANDATE-0001</MndtId>
-              <UETR>8a562c67-ca16-48ba-b074-65581be6f004</UETR>
             </Refs>
             <Amt Ccy="EUR">500.00</Amt>
             <CdtDbtInd>DBIT</CdtDbtInd>
@@ -433,9 +433,7 @@
                 </Domn>
               </OrgnlBkTxCd>
               <Orgtr>
-                <Pty>
-                  <Nm>Example Creditor Ltd</Nm>
-                </Pty>
+                <Nm>Example Creditor Ltd</Nm>
               </Orgtr>
               <Rsn>
                 <Cd>AC04</Cd>

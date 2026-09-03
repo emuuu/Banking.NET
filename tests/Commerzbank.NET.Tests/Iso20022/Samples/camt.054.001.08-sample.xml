@@ -50,8 +50,8 @@
           <TxDtls>
             <Refs>
               <EndToEndId>E2E-0005</EndToEndId>
-              <TxId>TXID-0005</TxId>
               <UETR>8a562c67-ca16-48ba-b074-65581be6f005</UETR>
+              <TxId>TXID-0005</TxId>
             </Refs>
             <RltdPties>
               <Dbtr>

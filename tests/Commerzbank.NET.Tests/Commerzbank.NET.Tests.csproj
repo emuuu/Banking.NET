@@ -31,6 +31,7 @@
 
   <ItemGroup>
     <EmbeddedResource Include="Iso20022/Samples/**" />
+    <EmbeddedResource Include="Iso20022/Schemas/**" />
   </ItemGroup>
 
 </Project>
