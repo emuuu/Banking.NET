@@ -637,6 +637,188 @@ public class PainValidatorTests
     }
 
     [Fact]
+    public void ValidateCreditTransfer_CreditorReferenceWhitespaceOnly_ThrowsWithPath()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].Transactions[0].RemittanceInformation = new RemittanceInformation
+        {
+            CreditorReference = " ",
+        };
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => ValidateCreditTransfer(initiation));
+
+        exception.Path.ShouldBe("PaymentInformations[0].Transactions[0].RemittanceInformation.CreditorReference");
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_ServiceLevelCodeEmpty_ThrowsWithPath()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].ServiceLevelCode = string.Empty;
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => ValidateCreditTransfer(initiation));
+
+        exception.Path.ShouldBe("PaymentInformations[0].ServiceLevelCode");
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_ServiceLevelCodeValid_DoesNotThrow()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].ServiceLevelCode = "URGP";
+
+        Should.NotThrow(() => ValidateCreditTransfer(initiation));
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_PurposeCodeExceeds4Characters_ThrowsWithPath()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].Transactions[0].PurposeCode = "ABCDE";
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => ValidateCreditTransfer(initiation));
+
+        exception.Path.ShouldBe("PaymentInformations[0].Transactions[0].PurposeCode");
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_PurposeCodeAt4Characters_DoesNotThrow()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].Transactions[0].PurposeCode = "SUPP";
+
+        Should.NotThrow(() => ValidateCreditTransfer(initiation));
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_DebtorAccountOtherIdAt34Characters_DoesNotThrow()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].DebtorAccount = new AccountIdentification { OtherId = new string('A', 34) };
+
+        Should.NotThrow(() => ValidateCreditTransfer(initiation));
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_DebtorAccountOtherIdExceeds34Characters_ThrowsWithPath()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].DebtorAccount = new AccountIdentification { OtherId = new string('A', 35) };
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => ValidateCreditTransfer(initiation));
+
+        exception.Path.ShouldBe("PaymentInformations[0].DebtorAccount.OtherId");
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_DebtorAccountCurrencyLowercase_ThrowsWithPath()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].DebtorAccount.Currency = "eur";
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => ValidateCreditTransfer(initiation));
+
+        exception.Path.ShouldBe("PaymentInformations[0].DebtorAccount.Currency");
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_DebtorAccountCurrencyValid_DoesNotThrow()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].DebtorAccount.Currency = "EUR";
+
+        Should.NotThrow(() => ValidateCreditTransfer(initiation));
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_BicWithDigitInFirstSixPositionsAtLegacyVersion_ThrowsWithPath()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].DebtorAgent = new FinancialInstitution { Bic = "C0BADEFF" };
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => ValidateCreditTransfer(initiation));
+
+        exception.Path.ShouldBe("PaymentInformations[0].DebtorAgent.Bic");
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_BicWithDigitInFirstSixPositionsAtCurrentVersion_DoesNotThrow()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].DebtorAgent = new FinancialInstitution { Bic = "C0BADEFF" };
+
+        Should.NotThrow(() => PainValidator.ValidateCreditTransfer(initiation, Pain001Version.V09, new Pain00xWriterOptions()));
+    }
+
+    [Theory]
+    [InlineData("COBADEFF")]
+    [InlineData("COBADEFFXXX")]
+    [InlineData("MARKDEF1100")]
+    public void ValidateCreditTransfer_ValidBicsAtCurrentVersion_DoesNotThrow(string bic)
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].DebtorAgent = new FinancialInstitution { Bic = bic };
+
+        Should.NotThrow(() => PainValidator.ValidateCreditTransfer(initiation, Pain001Version.V09, new Pain00xWriterOptions()));
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_PaymentInformationControlSumExceeds18TotalDigits_ThrowsWithPath()
+    {
+        var initiation = ValidCreditTransfer();
+        var pmtInf = initiation.PaymentInformations[0];
+        pmtInf.Transactions[0].Amount = new Money(9999999999999999.99m, "EUR");
+        pmtInf.Transactions.Add(new CreditTransferTransaction
+        {
+            EndToEndId = "E2E-0002",
+            Amount = new Money(9999999999999999.99m, "EUR"),
+            Creditor = new PartyIdentification { Name = "Example Creditor Ltd" },
+            CreditorAccount = new AccountIdentification { Iban = ValidIban2 },
+        });
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => ValidateCreditTransfer(initiation));
+
+        exception.Path.ShouldBe("PaymentInformations[0].ControlSum");
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_PaymentInformationControlSumAt18TotalDigits_DoesNotThrow()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].Transactions[0].Amount = new Money(9999999999999999.99m, "EUR");
+
+        Should.NotThrow(() => ValidateCreditTransfer(initiation));
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_TotalControlSumExceeds18TotalDigits_ThrowsWithPath()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].Transactions[0].Amount = new Money(9999999999999999.99m, "EUR");
+        initiation.PaymentInformations.Add(new CreditTransferPaymentInformation
+        {
+            PaymentInformationId = "PMTINF-0002",
+            RequestedExecutionDate = new DateOnly(2026, 9, 16),
+            Debtor = new PartyIdentification { Name = "Example Debtor GmbH" },
+            DebtorAccount = new AccountIdentification { Iban = ValidIban1 },
+            Transactions =
+            [
+                new CreditTransferTransaction
+                {
+                    EndToEndId = "E2E-0003",
+                    Amount = new Money(9999999999999999.99m, "EUR"),
+                    Creditor = new PartyIdentification { Name = "Example Creditor Ltd" },
+                    CreditorAccount = new AccountIdentification { Iban = ValidIban2 },
+                },
+            ],
+        });
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => ValidateCreditTransfer(initiation));
+
+        exception.Path.ShouldBe("ControlSum");
+    }
+
+    [Fact]
     public void ValidateDirectDebit_ValidMinimalInitiation_DoesNotThrow() =>
         Should.NotThrow(() => ValidateDirectDebit(ValidDirectDebit()));
 
@@ -701,10 +883,50 @@ public class PainValidatorTests
     }
 
     [Fact]
+    public void ValidateDirectDebit_CreditorNameAt70CharactersInV02_DoesNotThrow()
+    {
+        var initiation = ValidDirectDebit();
+        initiation.PaymentInformations[0].Creditor.Name = new string('A', 70);
+
+        Should.NotThrow(() => ValidateDirectDebit(initiation));
+    }
+
+    [Fact]
     public void ValidateDirectDebit_CreditorNameAt140CharactersInV08_DoesNotThrow()
     {
         var initiation = ValidDirectDebit();
         initiation.PaymentInformations[0].Creditor.Name = new string('A', 140);
+
+        Should.NotThrow(() => PainValidator.ValidateDirectDebit(initiation, Pain008Version.V08, new Pain00xWriterOptions()));
+    }
+
+    [Fact]
+    public void ValidateDirectDebit_CreditorNameExceeds140CharactersInV08_ThrowsWithPath()
+    {
+        var initiation = ValidDirectDebit();
+        initiation.PaymentInformations[0].Creditor.Name = new string('A', 141);
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => PainValidator.ValidateDirectDebit(initiation, Pain008Version.V08, new Pain00xWriterOptions()));
+
+        exception.Path.ShouldBe("PaymentInformations[0].Creditor.Name");
+    }
+
+    [Fact]
+    public void ValidateDirectDebit_BicWithDigitInFirstSixPositionsAtLegacyVersion_ThrowsWithPath()
+    {
+        var initiation = ValidDirectDebit();
+        initiation.PaymentInformations[0].CreditorAgent = new FinancialInstitution { Bic = "C0BADEFF" };
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => ValidateDirectDebit(initiation));
+
+        exception.Path.ShouldBe("PaymentInformations[0].CreditorAgent.Bic");
+    }
+
+    [Fact]
+    public void ValidateDirectDebit_BicWithDigitInFirstSixPositionsAtCurrentVersion_DoesNotThrow()
+    {
+        var initiation = ValidDirectDebit();
+        initiation.PaymentInformations[0].CreditorAgent = new FinancialInstitution { Bic = "C0BADEFF" };
 
         Should.NotThrow(() => PainValidator.ValidateDirectDebit(initiation, Pain008Version.V08, new Pain00xWriterOptions()));
     }
@@ -836,6 +1058,19 @@ public class PainValidatorTests
         var exception = Should.Throw<Iso20022ValidationException>(() => ValidateDirectDebit(initiation));
 
         exception.Path.ShouldBe("PaymentInformations[0].Transactions[0].Mandate.OriginalDebtorAgent.Bic");
+    }
+
+    [Fact]
+    public void ValidateDirectDebit_MandateAmendmentOriginalDebtorAccountWithBothIbanAndOtherId_ThrowsWithPath()
+    {
+        var initiation = ValidDirectDebit();
+        var mandate = initiation.PaymentInformations[0].Transactions[0].Mandate;
+        mandate.AmendmentIndicator = true;
+        mandate.OriginalDebtorAccount = new AccountIdentification { Iban = ValidIban1, OtherId = "OTHER-ACCT-0001" };
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => ValidateDirectDebit(initiation));
+
+        exception.Path.ShouldBe("PaymentInformations[0].Transactions[0].Mandate.OriginalDebtorAccount");
     }
 
     [Fact]

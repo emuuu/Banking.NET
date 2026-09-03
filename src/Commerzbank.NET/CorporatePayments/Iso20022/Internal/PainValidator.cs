@@ -10,9 +10,20 @@ internal static class PainValidator
     private const int IdMaxLength = 35;
     private const int RemittanceLineMaxLength = 140;
     private const int AmountMaxTotalDigits = 18;
+    private const int OtherIdMaxLength = 34;
+    private const int ServiceLevelCodeMaxLength = 4;
+    private const int LocalInstrumentCodeMaxLength = 35;
+    private const int CategoryPurposeCodeMaxLength = 4;
+    private const int PurposeCodeMaxLength = 4;
 
     private static readonly Regex IbanFormat = new("^[A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
-    private static readonly Regex BicFormat = new("^[A-Z0-9]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    /// <summary>The BIC pattern of the current schemas (<c>BICFIDec2014Identifier</c>/<c>AnyBICDec2014Identifier</c>).</summary>
+    private static readonly Regex BicFormatCurrent = new("^[A-Z0-9]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    /// <summary>The BIC pattern of the legacy schemas (<c>BICIdentifier</c>/<c>AnyBICIdentifier</c>): no digits in positions 1-6.</summary>
+    private static readonly Regex BicFormatLegacy = new("^[A-Z]{6}[A-Z2-9][A-NP-Z0-9]([A-Z0-9]{3})?$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
     private static readonly Regex CurrencyFormat = new("^[A-Z]{3}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     /// <summary>Validates a pain.001 credit transfer initiation.</summary>
@@ -20,11 +31,12 @@ internal static class PainValidator
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="version"/>, or an enum value within <paramref name="initiation"/>, is not defined.</exception>
     public static void ValidateCreditTransfer(CreditTransferInitiation initiation, Pain001Version version, Pain00xWriterOptions options)
     {
+        var isCurrentVersion = PainWriterHelpers.IsCurrentVersion(version);
         var nameMaxLength = PainWriterHelpers.MaxNameLength(version);
 
         ValidateId(initiation.MessageId, "MessageId", options);
         ValidateName(initiation.InitiatingParty.Name, nameMaxLength, "InitiatingParty.Name", options);
-        ValidateParty(initiation.InitiatingParty, "InitiatingParty", options);
+        ValidateParty(initiation.InitiatingParty, "InitiatingParty", options, isCurrentVersion);
 
         if (initiation.PaymentInformations.Count == 0)
             throw new Iso20022ValidationException("At least one payment information block is required.", "PaymentInformations");
@@ -39,12 +51,15 @@ internal static class PainValidator
                 ValidateEnumDefined(instructionPriority, $"{pmtInfPath}.InstructionPriority");
             if (pmtInf.ChargeBearer is { } pmtInfChargeBearer)
                 ValidateEnumDefined(pmtInfChargeBearer, $"{pmtInfPath}.ChargeBearer");
+            ValidateOptionalId(pmtInf.ServiceLevelCode, $"{pmtInfPath}.ServiceLevelCode", options, ServiceLevelCodeMaxLength);
+            ValidateOptionalId(pmtInf.LocalInstrumentCode, $"{pmtInfPath}.LocalInstrumentCode", options, LocalInstrumentCodeMaxLength);
+            ValidateOptionalId(pmtInf.CategoryPurposeCode, $"{pmtInfPath}.CategoryPurposeCode", options, CategoryPurposeCodeMaxLength);
             ValidateName(pmtInf.Debtor.Name, nameMaxLength, $"{pmtInfPath}.Debtor.Name", options);
-            ValidateParty(pmtInf.Debtor, $"{pmtInfPath}.Debtor", options);
+            ValidateParty(pmtInf.Debtor, $"{pmtInfPath}.Debtor", options, isCurrentVersion);
             ValidateOptionalName(pmtInf.UltimateDebtor?.Name, nameMaxLength, $"{pmtInfPath}.UltimateDebtor.Name", options);
-            ValidateParty(pmtInf.UltimateDebtor, $"{pmtInfPath}.UltimateDebtor", options);
-            ValidateAccount(pmtInf.DebtorAccount, $"{pmtInfPath}.DebtorAccount");
-            ValidateOptionalBic(pmtInf.DebtorAgent?.Bic, $"{pmtInfPath}.DebtorAgent.Bic");
+            ValidateParty(pmtInf.UltimateDebtor, $"{pmtInfPath}.UltimateDebtor", options, isCurrentVersion);
+            ValidateAccount(pmtInf.DebtorAccount, $"{pmtInfPath}.DebtorAccount", options);
+            ValidateOptionalBic(pmtInf.DebtorAgent?.Bic, $"{pmtInfPath}.DebtorAgent.Bic", isCurrentVersion);
 
             if (pmtInf.Transactions.Count == 0)
                 throw new Iso20022ValidationException("A payment information block requires at least one transaction.", $"{pmtInfPath}.Transactions");
@@ -58,16 +73,21 @@ internal static class PainValidator
                 ValidateId(transaction.EndToEndId, $"{txPath}.EndToEndId", options);
                 ValidateAmount(transaction.Amount, $"{txPath}.Amount");
                 ValidateName(transaction.Creditor.Name, nameMaxLength, $"{txPath}.Creditor.Name", options);
-                ValidateParty(transaction.Creditor, $"{txPath}.Creditor", options);
+                ValidateParty(transaction.Creditor, $"{txPath}.Creditor", options, isCurrentVersion);
                 ValidateOptionalName(transaction.UltimateDebtor?.Name, nameMaxLength, $"{txPath}.UltimateDebtor.Name", options);
-                ValidateParty(transaction.UltimateDebtor, $"{txPath}.UltimateDebtor", options);
+                ValidateParty(transaction.UltimateDebtor, $"{txPath}.UltimateDebtor", options, isCurrentVersion);
                 ValidateOptionalName(transaction.UltimateCreditor?.Name, nameMaxLength, $"{txPath}.UltimateCreditor.Name", options);
-                ValidateParty(transaction.UltimateCreditor, $"{txPath}.UltimateCreditor", options);
-                ValidateAccount(transaction.CreditorAccount, $"{txPath}.CreditorAccount");
-                ValidateOptionalBic(transaction.CreditorAgent?.Bic, $"{txPath}.CreditorAgent.Bic");
+                ValidateParty(transaction.UltimateCreditor, $"{txPath}.UltimateCreditor", options, isCurrentVersion);
+                ValidateAccount(transaction.CreditorAccount, $"{txPath}.CreditorAccount", options);
+                ValidateOptionalBic(transaction.CreditorAgent?.Bic, $"{txPath}.CreditorAgent.Bic", isCurrentVersion);
+                ValidateOptionalId(transaction.PurposeCode, $"{txPath}.PurposeCode", options, PurposeCodeMaxLength);
                 ValidateRemittance(transaction.RemittanceInformation, pmtInf.ServiceLevelCode, $"{txPath}.RemittanceInformation", options);
             }
+
+            ValidateControlSum(pmtInf.ControlSum, $"{pmtInfPath}.ControlSum");
         }
+
+        ValidateControlSum(initiation.ControlSum, "ControlSum");
     }
 
     /// <summary>Validates a pain.008 direct debit initiation.</summary>
@@ -75,11 +95,12 @@ internal static class PainValidator
     /// <exception cref="ArgumentOutOfRangeException"><paramref name="version"/>, or an enum value within <paramref name="initiation"/>, is not defined.</exception>
     public static void ValidateDirectDebit(DirectDebitInitiation initiation, Pain008Version version, Pain00xWriterOptions options)
     {
+        var isCurrentVersion = PainWriterHelpers.IsCurrentVersion(version);
         var nameMaxLength = PainWriterHelpers.MaxNameLength(version);
 
         ValidateId(initiation.MessageId, "MessageId", options);
         ValidateName(initiation.InitiatingParty.Name, nameMaxLength, "InitiatingParty.Name", options);
-        ValidateParty(initiation.InitiatingParty, "InitiatingParty", options);
+        ValidateParty(initiation.InitiatingParty, "InitiatingParty", options, isCurrentVersion);
 
         if (initiation.PaymentInformations.Count == 0)
             throw new Iso20022ValidationException("At least one payment information block is required.", "PaymentInformations");
@@ -94,12 +115,14 @@ internal static class PainValidator
             ValidateEnumDefined(pmtInf.SequenceType, $"{pmtInfPath}.SequenceType");
             if (pmtInf.ChargeBearer is { } pmtInfChargeBearer)
                 ValidateEnumDefined(pmtInfChargeBearer, $"{pmtInfPath}.ChargeBearer");
+            ValidateOptionalId(pmtInf.ServiceLevelCode, $"{pmtInfPath}.ServiceLevelCode", options, ServiceLevelCodeMaxLength);
+            ValidateOptionalId(pmtInf.CategoryPurposeCode, $"{pmtInfPath}.CategoryPurposeCode", options, CategoryPurposeCodeMaxLength);
             ValidateName(pmtInf.Creditor.Name, nameMaxLength, $"{pmtInfPath}.Creditor.Name", options);
-            ValidateParty(pmtInf.Creditor, $"{pmtInfPath}.Creditor", options);
+            ValidateParty(pmtInf.Creditor, $"{pmtInfPath}.Creditor", options, isCurrentVersion);
             ValidateOptionalName(pmtInf.UltimateCreditor?.Name, nameMaxLength, $"{pmtInfPath}.UltimateCreditor.Name", options);
-            ValidateParty(pmtInf.UltimateCreditor, $"{pmtInfPath}.UltimateCreditor", options);
-            ValidateAccount(pmtInf.CreditorAccount, $"{pmtInfPath}.CreditorAccount");
-            ValidateOptionalBic(pmtInf.CreditorAgent?.Bic, $"{pmtInfPath}.CreditorAgent.Bic");
+            ValidateParty(pmtInf.UltimateCreditor, $"{pmtInfPath}.UltimateCreditor", options, isCurrentVersion);
+            ValidateAccount(pmtInf.CreditorAccount, $"{pmtInfPath}.CreditorAccount", options);
+            ValidateOptionalBic(pmtInf.CreditorAgent?.Bic, $"{pmtInfPath}.CreditorAgent.Bic", isCurrentVersion);
             ValidateId(pmtInf.CreditorSchemeId, $"{pmtInfPath}.CreditorSchemeId", options);
 
             if (pmtInf.Transactions.Count == 0)
@@ -122,20 +145,25 @@ internal static class PainValidator
                     ValidateOptionalId(transaction.Mandate.OriginalMandateId, $"{txPath}.Mandate.OriginalMandateId", options);
                     ValidateOptionalId(transaction.Mandate.OriginalCreditorSchemeId, $"{txPath}.Mandate.OriginalCreditorSchemeId", options);
                     ValidateOptionalName(transaction.Mandate.OriginalCreditorName, nameMaxLength, $"{txPath}.Mandate.OriginalCreditorName", options);
-                    if (transaction.Mandate.OriginalDebtorAccount?.Iban is { } originalDebtorIban)
-                        ValidateIbanFormat(originalDebtorIban, $"{txPath}.Mandate.OriginalDebtorAccount.Iban");
-                    ValidateOptionalBic(transaction.Mandate.OriginalDebtorAgent?.Bic, $"{txPath}.Mandate.OriginalDebtorAgent.Bic");
+                    if (transaction.Mandate.OriginalDebtorAccount is { } originalDebtorAccount)
+                        ValidateAccount(originalDebtorAccount, $"{txPath}.Mandate.OriginalDebtorAccount", options);
+                    ValidateOptionalBic(transaction.Mandate.OriginalDebtorAgent?.Bic, $"{txPath}.Mandate.OriginalDebtorAgent.Bic", isCurrentVersion);
                 }
 
                 ValidateName(transaction.Debtor.Name, nameMaxLength, $"{txPath}.Debtor.Name", options);
-                ValidateParty(transaction.Debtor, $"{txPath}.Debtor", options);
+                ValidateParty(transaction.Debtor, $"{txPath}.Debtor", options, isCurrentVersion);
                 ValidateOptionalName(transaction.UltimateDebtor?.Name, nameMaxLength, $"{txPath}.UltimateDebtor.Name", options);
-                ValidateParty(transaction.UltimateDebtor, $"{txPath}.UltimateDebtor", options);
-                ValidateAccount(transaction.DebtorAccount, $"{txPath}.DebtorAccount");
-                ValidateOptionalBic(transaction.DebtorAgent?.Bic, $"{txPath}.DebtorAgent.Bic");
+                ValidateParty(transaction.UltimateDebtor, $"{txPath}.UltimateDebtor", options, isCurrentVersion);
+                ValidateAccount(transaction.DebtorAccount, $"{txPath}.DebtorAccount", options);
+                ValidateOptionalBic(transaction.DebtorAgent?.Bic, $"{txPath}.DebtorAgent.Bic", isCurrentVersion);
+                ValidateOptionalId(transaction.PurposeCode, $"{txPath}.PurposeCode", options, PurposeCodeMaxLength);
                 ValidateRemittance(transaction.RemittanceInformation, pmtInf.ServiceLevelCode, $"{txPath}.RemittanceInformation", options);
             }
+
+            ValidateControlSum(pmtInf.ControlSum, $"{pmtInfPath}.ControlSum");
         }
+
+        ValidateControlSum(initiation.ControlSum, "ControlSum");
     }
 
     private static void ValidateId(string? value, string path, Pain00xWriterOptions options)
@@ -147,14 +175,15 @@ internal static class PainValidator
         ValidateCharacterSet(value, path, options);
     }
 
-    private static void ValidateOptionalId(string? value, string path, Pain00xWriterOptions options)
+    /// <summary>Validates that <paramref name="value"/> is null or a non-blank identifier of at most <paramref name="maxLength"/> characters.</summary>
+    private static void ValidateOptionalId(string? value, string path, Pain00xWriterOptions options, int maxLength = IdMaxLength)
     {
         if (value is null)
             return;
         if (string.IsNullOrWhiteSpace(value))
             throw new Iso20022ValidationException("An identifier must not be empty or whitespace-only when set.", path);
-        if (value.Length > IdMaxLength)
-            throw new Iso20022ValidationException($"An identifier must not exceed {IdMaxLength} characters.", path);
+        if (value.Length > maxLength)
+            throw new Iso20022ValidationException($"An identifier must not exceed {maxLength} characters.", path);
         ValidateCharacterSet(value, path, options);
     }
 
@@ -186,14 +215,14 @@ internal static class PainValidator
     }
 
     /// <summary>Validates the organisation/private identification of a party, e.g. an organisation BIC or the character set of scheme identifiers.</summary>
-    private static void ValidateParty(PartyIdentification? party, string path, Pain00xWriterOptions options)
+    private static void ValidateParty(PartyIdentification? party, string path, Pain00xWriterOptions options, bool isCurrentVersion)
     {
         if (party is null)
             return;
 
         if (party.OrganisationId is { } organisation)
         {
-            ValidateOptionalBic(organisation.Bic, $"{path}.OrganisationId.Bic");
+            ValidateOptionalBic(organisation.Bic, $"{path}.OrganisationId.Bic", isCurrentVersion);
             ValidateOptionalId(organisation.OtherId, $"{path}.OrganisationId.OtherId", options);
             ValidateOptionalId(organisation.OtherSchemeCode, $"{path}.OrganisationId.OtherSchemeCode", options);
             ValidateOptionalId(organisation.OtherSchemeProprietary, $"{path}.OrganisationId.OtherSchemeProprietary", options);
@@ -209,8 +238,11 @@ internal static class PainValidator
         }
     }
 
-    /// <summary>Validates that an account carries exactly one of an IBAN or another identifier, and that a set IBAN is well-formed.</summary>
-    private static void ValidateAccount(AccountIdentification account, string path)
+    /// <summary>
+    /// Validates that an account carries exactly one of an IBAN or another identifier (at most <see cref="OtherIdMaxLength"/>
+    /// characters), that a set IBAN is well-formed, and that a set currency is a 3-letter uppercase ISO 4217 code.
+    /// </summary>
+    private static void ValidateAccount(AccountIdentification account, string path, Pain00xWriterOptions options)
     {
         var hasIban = !string.IsNullOrWhiteSpace(account.Iban);
         var hasOtherId = !string.IsNullOrWhiteSpace(account.OtherId);
@@ -222,6 +254,15 @@ internal static class PainValidator
 
         if (hasIban)
             ValidateIbanFormat(account.Iban!, $"{path}.Iban");
+        else
+        {
+            if (account.OtherId!.Length > OtherIdMaxLength)
+                throw new Iso20022ValidationException($"An other account identifier must not exceed {OtherIdMaxLength} characters.", $"{path}.OtherId");
+            ValidateCharacterSet(account.OtherId, $"{path}.OtherId", options);
+        }
+
+        if (account.Currency is { } currency && !CurrencyFormat.IsMatch(currency))
+            throw new Iso20022ValidationException("A currency must be a 3-letter uppercase ISO 4217 code.", $"{path}.Currency");
     }
 
     private static void ValidateAmount(Money amount, string path)
@@ -235,6 +276,13 @@ internal static class PainValidator
 
         if (amount.Currency is not { } currency || !CurrencyFormat.IsMatch(currency))
             throw new Iso20022ValidationException("A currency must be a 3-letter uppercase ISO 4217 code.", $"{path}.Currency");
+    }
+
+    /// <summary>Validates that a control sum (the total of one or more amounts) does not exceed the XSD's total-digits limit.</summary>
+    private static void ValidateControlSum(decimal controlSum, string path)
+    {
+        if (CountTotalDigits(controlSum) > AmountMaxTotalDigits)
+            throw new Iso20022ValidationException($"A control sum must not carry more than {AmountMaxTotalDigits} total digits.", path);
     }
 
     /// <summary>Counts the digit characters of an amount as it would be written to XML (exactly two decimal places, no sign).</summary>
@@ -252,12 +300,22 @@ internal static class PainValidator
             throw new Iso20022ValidationException("The IBAN check digits are invalid.", path);
     }
 
-    private static void ValidateOptionalBic(string? bic, string path)
+    /// <summary>Validates a BIC against the version-appropriate pattern: the current schemas allow digits in positions 1-4, the legacy schemas do not.</summary>
+    private static void ValidateOptionalBic(string? bic, string path, bool isCurrentVersion)
     {
         if (bic is null)
             return;
-        if (!BicFormat.IsMatch(bic))
-            throw new Iso20022ValidationException("A BIC must match the pattern [A-Z0-9]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?.", path);
+
+        if (isCurrentVersion)
+        {
+            if (!BicFormatCurrent.IsMatch(bic))
+                throw new Iso20022ValidationException("A BIC must match the pattern [A-Z0-9]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?.", path);
+        }
+        else
+        {
+            if (!BicFormatLegacy.IsMatch(bic))
+                throw new Iso20022ValidationException("A BIC must match the pattern [A-Z]{6}[A-Z2-9][A-NP-Z0-9]([A-Z0-9]{3})?.", path);
+        }
     }
 
     private static void ValidateRemittance(RemittanceInformation? remittance, string? serviceLevelCode, string path, Pain00xWriterOptions options)
@@ -266,7 +324,7 @@ internal static class PainValidator
             return;
 
         var hasUnstructured = remittance.Unstructured.Count > 0;
-        var hasStructured = !string.IsNullOrEmpty(remittance.CreditorReference);
+        var hasStructured = remittance.CreditorReference is not null;
 
         if (hasUnstructured && hasStructured)
             throw new Iso20022ValidationException("Remittance information must carry either unstructured lines or a creditor reference, not both.", path);
@@ -288,9 +346,14 @@ internal static class PainValidator
 
         if (hasStructured)
         {
+            if (string.IsNullOrWhiteSpace(remittance.CreditorReference))
+                throw new Iso20022ValidationException("A creditor reference must not be empty or whitespace-only when set.", $"{path}.CreditorReference");
             if (remittance.CreditorReference!.Length > IdMaxLength)
                 throw new Iso20022ValidationException($"A creditor reference must not exceed {IdMaxLength} characters.", $"{path}.CreditorReference");
             ValidateCharacterSet(remittance.CreditorReference, $"{path}.CreditorReference", options);
+
+            ValidateOptionalId(remittance.CreditorReferenceTypeCode, $"{path}.CreditorReferenceTypeCode", options);
+            ValidateOptionalId(remittance.CreditorReferenceIssuer, $"{path}.CreditorReferenceIssuer", options);
         }
     }
 

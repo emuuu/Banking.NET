@@ -159,7 +159,7 @@ internal static class PainWriterHelpers
             return element;
         }
 
-        if (remittance.CreditorReference is { } reference)
+        if (remittance.CreditorReference is { } reference && !string.IsNullOrWhiteSpace(reference))
         {
             var type = new XElement(ns + "Tp",
                 new XElement(ns + "CdOrPrtry", new XElement(ns + "Cd", remittance.CreditorReferenceTypeCode ?? "SCOR")));

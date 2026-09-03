@@ -1,3 +1,4 @@
+using System.Xml.Linq;
 using Commerzbank.NET.CorporatePayments.Iso20022;
 using Shouldly;
 using Xunit;
@@ -198,6 +199,27 @@ public class Pain008WriterTests
         var ns = document.Root!.Name.Namespace;
         var originalDebtorAgent = document.Descendants(ns + "OrgnlDbtrAgt").Single();
         originalDebtorAgent.Descendants(ns + "BIC").Single().Value.ShouldBe("MARKDEF1100");
+    }
+
+    [Theory]
+    [InlineData(Pain008Version.V02, "pain.008.001.02.xsd")]
+    [InlineData(Pain008Version.V08, "pain.008.001.08.xsd")]
+    public void Write_MandateAmendmentWithOriginalDebtorAccountOtherId_WritesOthrIdAndValidatesAgainstSchema(Pain008Version version, string schemaFileName)
+    {
+        var initiation = MinimalInitiation();
+        var mandate = initiation.PaymentInformations[0].Transactions[0].Mandate;
+        mandate.AmendmentIndicator = true;
+        mandate.OriginalDebtorAccount = new AccountIdentification { OtherId = "SMNDA" };
+
+        var xml = Pain008Writer.WriteToString(initiation, version);
+        var document = XDocument.Parse(xml);
+
+        var ns = document.Root!.Name.Namespace;
+        var originalDebtorAccount = document.Descendants(ns + "OrgnlDbtrAcct").Single();
+        originalDebtorAccount.Element(ns + "Id")!.Element(ns + "Othr")!.Element(ns + "Id")!.Value.ShouldBe("SMNDA");
+        originalDebtorAccount.Descendants(ns + "IBAN").ShouldBeEmpty();
+
+        SchemaValidator.Validate(schemaFileName, xml).ShouldBeEmpty();
     }
 
     [Theory]

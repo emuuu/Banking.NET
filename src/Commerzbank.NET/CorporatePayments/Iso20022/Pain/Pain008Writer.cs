@@ -219,8 +219,8 @@ public static class Pain008Writer
             element.Add(originalCreditorSchemeId);
         }
 
-        if (mandate.OriginalDebtorAccount?.Iban is { } originalIban)
-            element.Add(new XElement(ns + "OrgnlDbtrAcct", new XElement(ns + "Id", new XElement(ns + "IBAN", PainWriterHelpers.NormalizeIban(originalIban)))));
+        if (mandate.OriginalDebtorAccount is { } originalDebtorAccount)
+            element.Add(PainWriterHelpers.WriteAccount(ns, "OrgnlDbtrAcct", originalDebtorAccount, includeCurrency: false));
 
         if (mandate.OriginalDebtorAgent is { } originalDebtorAgent)
             element.Add(new XElement(ns + "OrgnlDbtrAgt", PainWriterHelpers.WriteAgent(ns, bicElementName, originalDebtorAgent, "SMNDA")));
