@@ -46,13 +46,14 @@ public class Camt086ReaderTests
         statement.FromDate.ShouldBe(new DateOnly(2026, 8, 1));
         statement.ToDate.ShouldBe(new DateOnly(2026, 8, 31));
         statement.CreationDateTime.ShouldBe(new DateTimeOffset(2026, 9, 1, 9, 0, 0, TimeSpan.FromHours(2)));
-        statement.Status.ShouldBe("FINL");
-        statement.AccountLevel.ShouldBe("STMT");
+        statement.Status.ShouldBe("ORGN");
+        statement.AccountLevel.ShouldBe("SMRY");
         statement.Account.ShouldNotBeNull();
         statement.Account!.Iban.ShouldBe("DE89370400440532013000");
         statement.AccountServicer.ShouldNotBeNull();
         statement.AccountServicer!.Bic.ShouldBe("COBADEFFXXX");
         statement.AccountServicer.Name.ShouldBe("Commerzbank AG");
+        statement.CompensationMethod.ShouldBe("DDBT");
         statement.AccountBalanceCurrency.ShouldBe("EUR");
         statement.SettlementCurrency.ShouldBe("EUR");
         statement.HostCurrency.ShouldBe("EUR");
@@ -72,6 +73,38 @@ public class Camt086ReaderTests
         balance.Source.ShouldNotBeNull();
     }
 
+    [Theory]
+    [InlineData("true", CreditDebitIndicator.Debit)]
+    [InlineData("false", CreditDebitIndicator.Credit)]
+    [InlineData(null, CreditDebitIndicator.Credit)]
+    public void Read_BalanceValSgn_DeterminesCreditDebit(string? sign, CreditDebitIndicator expected)
+    {
+        var signElement = sign is null ? string.Empty : $"<Sgn>{sign}</Sgn>";
+        var xml = $"""
+            <Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.086.001.02">
+              <BkSvcsBllgStmt>
+                <BllgStmtGrp>
+                  <BllgStmt>
+                    <StmtId>BILLSTMT-1</StmtId>
+                    <Bal>
+                      <Tp><Cd>CLBD</Cd></Tp>
+                      <Val>
+                        <Amt Ccy="EUR">10.00</Amt>
+                        {signElement}
+                      </Val>
+                    </Bal>
+                  </BllgStmt>
+                </BllgStmtGrp>
+              </BkSvcsBllgStmt>
+            </Document>
+            """;
+
+        var balance = Camt086Reader.Read(xml).Groups[0].Statements[0].Balances[0];
+
+        balance.Amount.ShouldBe(new Money(10.00m, "EUR"));
+        balance.CreditDebit.ShouldBe(expected);
+    }
+
     [Fact]
     public void Read_Sample_ReadsThreeServices()
     {
@@ -81,9 +114,10 @@ public class Camt086ReaderTests
         var accountMaintenance = statement.Services[0];
         accountMaintenance.ServiceId.ShouldBe("ACCTMAINT");
         accountMaintenance.SubServiceCode.ShouldBe("MONTHLY");
-        accountMaintenance.SubServiceIssuer.ShouldBe("BANK");
+        accountMaintenance.SubServiceIssuer.ShouldBe("MACT");
         accountMaintenance.Description.ShouldBe("Account maintenance fee");
         accountMaintenance.CommonCode.ShouldBe("A001");
+        accountMaintenance.CommonCodeIssuer.ShouldBe("CMZ");
         accountMaintenance.ServiceType.ShouldBe("STAN");
         accountMaintenance.BankTransactionCode.ShouldNotBeNull();
         accountMaintenance.BankTransactionCode!.Domain.ShouldBe("ACMT");
@@ -92,25 +126,78 @@ public class Camt086ReaderTests
         accountMaintenance.Volume.ShouldBe(1m);
         accountMaintenance.PriceCurrency.ShouldBe("EUR");
         accountMaintenance.UnitPrice.ShouldBe(new Money(15.00m, "EUR"));
-        accountMaintenance.PriceMethod.ShouldBe("FLAT");
-        accountMaintenance.PaymentMethod.ShouldBe("DDBT");
+        accountMaintenance.PriceMethod.ShouldBe("FCHG");
+        accountMaintenance.PaymentMethod.ShouldBe("FLAT");
         accountMaintenance.OriginalChargePrice.ShouldBe(new Money(15.00m, "EUR"));
         accountMaintenance.OriginalChargeSettlementAmount.ShouldBe(new Money(15.00m, "EUR"));
-        accountMaintenance.TaxDesignation.ShouldBe("TAXB");
+        accountMaintenance.TaxDesignation.ShouldBe("TAXE");
         accountMaintenance.Source.ShouldNotBeNull();
 
         var wireTransfer = statement.Services[1];
         wireTransfer.ServiceId.ShouldBe("WIRETRANSFER");
+        wireTransfer.SubServiceIssuer.ShouldBe("SEQN");
         wireTransfer.Description.ShouldBe("Outgoing wire transfer fee");
+        wireTransfer.CommonCode.ShouldBe("B002");
+        wireTransfer.CommonCodeIssuer.ShouldBe("CMZ");
         wireTransfer.Volume.ShouldBe(5m);
         wireTransfer.UnitPrice.ShouldBe(new Money(5.00m, "EUR"));
+        wireTransfer.PriceMethod.ShouldBe("UPRC");
+        wireTransfer.PaymentMethod.ShouldBe("BCMP");
         wireTransfer.OriginalChargePrice.ShouldBe(new Money(25.00m, "EUR"));
+        wireTransfer.TaxDesignation.ShouldBe("ZERO");
 
         var statementPrint = statement.Services[2];
         statementPrint.ServiceId.ShouldBe("STMTPRINT");
         statementPrint.Description.ShouldBe("Paper statement fee");
-        statementPrint.TaxDesignation.ShouldBe("EXMPT");
+        statementPrint.CommonCode.ShouldBe("C003");
+        statementPrint.CommonCodeIssuer.ShouldBe("CMZ");
+        statementPrint.PriceMethod.ShouldBe("STAM");
+        statementPrint.PaymentMethod.ShouldBe("INVS");
+        statementPrint.TaxDesignation.ShouldBe("XMPT");
         statementPrint.OriginalChargePrice.ShouldBe(new Money(5.90m, "EUR"));
+    }
+
+    [Fact]
+    public void Read_ServiceAmountsWithSgnTrue_NegatesAmounts()
+    {
+        const string xml = """
+            <Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.086.001.02">
+              <BkSvcsBllgStmt>
+                <BllgStmtGrp>
+                  <BllgStmt>
+                    <StmtId>BILLSTMT-1</StmtId>
+                    <Svc>
+                      <SvcDtl>
+                        <BkSvc>
+                          <Id>ACCTMAINT</Id>
+                          <Desc>Account maintenance fee</Desc>
+                        </BkSvc>
+                      </SvcDtl>
+                      <Pric>
+                        <UnitPric>
+                          <Amt Ccy="EUR">15.00</Amt>
+                          <Sgn>true</Sgn>
+                        </UnitPric>
+                      </Pric>
+                      <PmtMtd>FLAT</PmtMtd>
+                      <OrgnlChrgPric>
+                        <Amt Ccy="EUR">15.00</Amt>
+                        <Sgn>true</Sgn>
+                      </OrgnlChrgPric>
+                      <TaxDsgnt>
+                        <Cd>TAXE</Cd>
+                      </TaxDsgnt>
+                    </Svc>
+                  </BllgStmt>
+                </BllgStmtGrp>
+              </BkSvcsBllgStmt>
+            </Document>
+            """;
+
+        var service = Camt086Reader.Read(xml).Groups[0].Statements[0].Services[0];
+
+        service.UnitPrice.ShouldBe(new Money(-15.00m, "EUR"));
+        service.OriginalChargePrice.ShouldBe(new Money(-15.00m, "EUR"));
     }
 
     [Fact]
@@ -123,7 +210,8 @@ public class Camt086ReaderTests
         region.RegionNumber.ShouldBe("DE");
         region.RegionName.ShouldBe("Germany");
         region.CustomerTaxId.ShouldBe("DE123456789");
-        region.TotalTaxAmount.ShouldBe(new Money(8.72m, "EUR"));
+        region.SettlementAmount.ShouldBe(new Money(8.72m, "EUR"));
+        region.TaxDueToRegion.ShouldBe(new Money(8.50m, "EUR"));
         region.Source.ShouldNotBeNull();
     }
 
@@ -158,7 +246,9 @@ public class Camt086ReaderTests
                     <StmtId>BILLSTMT-1</StmtId>
                     <Bal>
                       <Tp><Cd>CLBD</Cd></Tp>
-                      <CdtDbtInd>DBIT</CdtDbtInd>
+                      <Val>
+                        <Sgn>true</Sgn>
+                      </Val>
                     </Bal>
                   </BllgStmt>
                 </BllgStmtGrp>

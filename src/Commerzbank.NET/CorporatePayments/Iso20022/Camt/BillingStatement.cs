@@ -29,6 +29,9 @@ public sealed class BillingStatement
     /// <summary>The account servicing institution (<c>AcctChrtcs/AcctSvcr</c>).</summary>
     public FinancialInstitution? AccountServicer { get; init; }
 
+    /// <summary>The coded compensation method for account charges (<c>AcctChrtcs/CompstnMtd</c>): <c>NOCP</c>/<c>DBTD</c>/<c>INVD</c>/<c>DDBT</c>.</summary>
+    public string? CompensationMethod { get; init; }
+
     /// <summary>The account balance currency (<c>AcctChrtcs/AcctBalCcyCd</c>).</summary>
     public string? AccountBalanceCurrency { get; init; }
 

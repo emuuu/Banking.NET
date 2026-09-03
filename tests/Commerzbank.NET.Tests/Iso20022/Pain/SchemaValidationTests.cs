@@ -25,12 +25,12 @@ public class SchemaValidationTests
         errors.ShouldBeEmpty();
     }
 
-    [Fact(Skip = "camt.086.001.02-sample.xml does not validate against the official schema yet: several billing " +
-        "elements (enumeration codes for Sts/AcctLvl/Mtd/PmtMtd/Cd, a missing mandatory Sgn element on " +
-        "Bal/UnitPrice/OriginalChargePrice/OriginalChargeSettlementAmount, account characteristics currency fields, " +
-        "and BIC vs. BICFI) do not match the current model; the billing model is being realigned with the schema.")]
+    [Fact]
     public void Camt086Sample_ValidatesAgainstSchema()
     {
+        var errors = SchemaValidator.Validate("camt.086.001.02.xsd", SampleXml.Load("camt.086.001.02-sample.xml"));
+
+        errors.ShouldBeEmpty();
     }
 
     [Theory]

@@ -80,6 +80,7 @@ public static class Camt086Reader
             AccountLevel = accountCharacteristics.Child("AcctLvl").Value(),
             Account = CommonReaders.ReadAccount(accountCharacteristics.Child("CshAcct")),
             AccountServicer = CommonReaders.ReadFinancialInstitution(accountCharacteristics.Child("AcctSvcr")),
+            CompensationMethod = accountCharacteristics.Child("CompstnMtd").Value(),
             AccountBalanceCurrency = accountCharacteristics.Child("AcctBalCcyCd").Value(),
             SettlementCurrency = accountCharacteristics.Child("SttlmCcyCd").Value(),
             HostCurrency = accountCharacteristics.Child("HstCcyCd").Value(),
@@ -90,15 +91,19 @@ public static class Camt086Reader
         };
     }
 
-    private static BillingBalance ReadBalance(XElement element) =>
-        new()
+    private static BillingBalance ReadBalance(XElement element)
+    {
+        var value = element.Child("Val");
+
+        return new BillingBalance
         {
             TypeCode = element.Path("Tp", "Cd").Value() ?? element.Path("Tp", "Prtry").Value(),
-            Amount = element.Path("Val", "Amt").Money()
+            Amount = value.Child("Amt").Money()
                 ?? throw new Iso20022ValidationException("Missing 'Amt' element on balance.", "BllgStmt/Bal/Val/Amt"),
-            CreditDebit = CommonReaders.ReadCreditDebit(element.Child("CdtDbtInd")),
+            CreditDebit = (value.Child("Sgn").Bool() ?? false) ? CreditDebitIndicator.Debit : CreditDebitIndicator.Credit,
             Source = element,
         };
+    }
 
     private static BillingService ReadService(XElement element)
     {
@@ -113,18 +118,19 @@ public static class Camt086Reader
             SubServiceCode = subService.Child("Id").Value(),
             SubServiceIssuer = subService.Path("Issr", "Cd").Value(),
             Description = bankService.Child("Desc").Value(),
-            CommonCode = bankService.Path("CmonCd", "Cd").Value(),
+            CommonCode = bankService.Path("CmonCd", "Id").Value(),
+            CommonCodeIssuer = bankService.Path("CmonCd", "Issr").Value(),
             ServiceType = bankService.Child("SvcTp").Value(),
             BankTransactionCode = CommonReaders.ReadBankTransactionCode(bankService.Child("BkTxCd")),
             Volume = serviceDetail.Child("Vol").Decimal(),
             PriceCurrency = pricing.Child("Ccy").Value(),
-            UnitPrice = pricing.Path("UnitPric", "Amt").Money(),
+            UnitPrice = SignedMoney(pricing.Child("UnitPric")),
             PriceMethod = pricing.Child("Mtd").Value(),
             PriceRule = pricing.Child("Rule").Value(),
             PaymentMethod = element.Child("PmtMtd").Value(),
-            OriginalChargePrice = element.Path("OrgnlChrgPric", "Amt").Money(),
-            OriginalChargeSettlementAmount = element.Path("OrgnlChrgSttlmAmt", "Amt").Money(),
-            BalanceRequiredAmount = element.Path("BalReqrdAcctAmt", "Amt").Money(),
+            OriginalChargePrice = SignedMoney(element.Child("OrgnlChrgPric")),
+            OriginalChargeSettlementAmount = SignedMoney(element.Child("OrgnlChrgSttlmAmt")),
+            BalanceRequiredAmount = SignedMoney(element.Child("BalReqrdAcctAmt")),
             TaxDesignation = element.Path("TaxDsgnt", "Cd").Value(),
             Source = element,
         };
@@ -136,7 +142,18 @@ public static class Camt086Reader
             RegionNumber = element.Child("RgnNb").Value(),
             RegionName = element.Child("RgnNm").Value(),
             CustomerTaxId = element.Child("CstmrTaxId").Value(),
-            TotalTaxAmount = element.Path("TtlTaxAmt", "Amt").Money(),
+            SettlementAmount = SignedMoney(element.Child("SttlmAmt")),
+            TaxDueToRegion = SignedMoney(element.Child("TaxDueToRgn")),
             Source = element,
         };
+
+    /// <summary>Reads an <c>AmountAndDirection34</c> element (<c>Amt</c> + <c>Sgn</c>), negating the amount when <c>Sgn</c> is <see langword="true"/>.</summary>
+    private static Money? SignedMoney(XElement? element)
+    {
+        var money = element.Child("Amt").Money();
+        if (money is null)
+            return null;
+
+        return (element.Child("Sgn").Bool() ?? false) ? money.Value with { Amount = -money.Value.Amount } : money;
+    }
 }

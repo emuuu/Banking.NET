@@ -17,8 +17,11 @@ public sealed class BillingService
     /// <summary>The service description (<c>SvcDtl/BkSvc/Desc</c>).</summary>
     public string? Description { get; init; }
 
-    /// <summary>The common (bank-independent) service code (<c>SvcDtl/BkSvc/CmonCd/Cd</c>).</summary>
+    /// <summary>The common (bank-independent) service code (<c>SvcDtl/BkSvc/CmonCd/Id</c>).</summary>
     public string? CommonCode { get; init; }
+
+    /// <summary>The issuer of the common service code (<c>SvcDtl/BkSvc/CmonCd/Issr</c>).</summary>
+    public string? CommonCodeIssuer { get; init; }
 
     /// <summary>The coded service type (<c>SvcDtl/BkSvc/SvcTp</c>).</summary>
     public string? ServiceType { get; init; }
@@ -32,7 +35,7 @@ public sealed class BillingService
     /// <summary>The pricing currency (<c>Pric/Ccy</c>).</summary>
     public string? PriceCurrency { get; init; }
 
-    /// <summary>The unit price (<c>Pric/UnitPric/Amt</c>).</summary>
+    /// <summary>The unit price (<c>Pric/UnitPric/Amt</c>). Negative when <c>Pric/UnitPric/Sgn</c> is <see langword="true"/>.</summary>
     public Money? UnitPrice { get; init; }
 
     /// <summary>The coded pricing method (<c>Pric/Mtd</c>).</summary>
@@ -44,13 +47,13 @@ public sealed class BillingService
     /// <summary>The coded payment method for the charge (<c>PmtMtd</c>).</summary>
     public string? PaymentMethod { get; init; }
 
-    /// <summary>The original charge price before any adjustments (<c>OrgnlChrgPric/Amt</c>).</summary>
+    /// <summary>The original charge price before any adjustments (<c>OrgnlChrgPric/Amt</c>). Negative when <c>OrgnlChrgPric/Sgn</c> is <see langword="true"/>.</summary>
     public Money? OriginalChargePrice { get; init; }
 
-    /// <summary>The original charge amount in the settlement currency (<c>OrgnlChrgSttlmAmt/Amt</c>).</summary>
+    /// <summary>The original charge amount in the settlement currency (<c>OrgnlChrgSttlmAmt/Amt</c>). Negative when <c>OrgnlChrgSttlmAmt/Sgn</c> is <see langword="true"/>.</summary>
     public Money? OriginalChargeSettlementAmount { get; init; }
 
-    /// <summary>The account balance required to offset this charge (<c>BalReqrdAcctAmt/Amt</c>).</summary>
+    /// <summary>The account balance required to offset this charge (<c>BalReqrdAcctAmt/Amt</c>). Negative when <c>BalReqrdAcctAmt/Sgn</c> is <see langword="true"/>.</summary>
     public Money? BalanceRequiredAmount { get; init; }
 
     /// <summary>The coded tax designation (<c>TaxDsgnt/Cd</c>).</summary>

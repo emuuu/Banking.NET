@@ -14,8 +14,11 @@ public sealed class BillingTaxRegion
     /// <summary>The customer's tax identifier in this region (<c>CstmrTaxId</c>).</summary>
     public string? CustomerTaxId { get; init; }
 
-    /// <summary>The total tax amount for this region (<c>TtlTaxAmt/Amt</c>).</summary>
-    public Money? TotalTaxAmount { get; init; }
+    /// <summary>The settlement amount for this region (<c>SttlmAmt/Amt</c>). Negative when <c>SttlmAmt/Sgn</c> is <see langword="true"/>.</summary>
+    public Money? SettlementAmount { get; init; }
+
+    /// <summary>The tax amount actually due to this region (<c>TaxDueToRgn/Amt</c>). Negative when <c>TaxDueToRgn/Sgn</c> is <see langword="true"/>.</summary>
+    public Money? TaxDueToRegion { get; init; }
 
     /// <summary>The <c>TaxRgn</c> element this tax region was read from.</summary>
     public required XElement Source { get; init; }

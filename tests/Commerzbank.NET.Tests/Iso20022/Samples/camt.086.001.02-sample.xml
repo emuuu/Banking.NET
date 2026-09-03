@@ -12,9 +12,24 @@
       <GrpId>BILLGRP-0001</GrpId>
       <Sndr>
         <Nm>Commerzbank AG</Nm>
+        <Id>
+          <OrgId>
+            <AnyBIC>COBADEFFXXX</AnyBIC>
+          </OrgId>
+        </Id>
       </Sndr>
       <Rcvr>
         <Nm>Example Debtor GmbH</Nm>
+        <Id>
+          <OrgId>
+            <Othr>
+              <Id>HRB12345</Id>
+              <SchmeNm>
+                <Cd>COID</Cd>
+              </SchmeNm>
+            </Othr>
+          </OrgId>
+        </Id>
       </Rcvr>
       <BllgStmt>
         <StmtId>BILLSTMT-0001</StmtId>
@@ -23,9 +38,9 @@
           <ToDt>2026-08-31</ToDt>
         </FrToDt>
         <CreDtTm>2026-09-01T09:00:00+02:00</CreDtTm>
-        <Sts>FINL</Sts>
+        <Sts>ORGN</Sts>
         <AcctChrtcs>
-          <AcctLvl>STMT</AcctLvl>
+          <AcctLvl>SMRY</AcctLvl>
           <CshAcct>
             <Id>
               <IBAN>DE89370400440532013000</IBAN>
@@ -33,13 +48,17 @@
           </CshAcct>
           <AcctSvcr>
             <FinInstnId>
-              <BIC>COBADEFFXXX</BIC>
+              <BICFI>COBADEFFXXX</BICFI>
               <Nm>Commerzbank AG</Nm>
             </FinInstnId>
           </AcctSvcr>
+          <CompstnMtd>DDBT</CompstnMtd>
           <AcctBalCcyCd>EUR</AcctBalCcyCd>
           <SttlmCcyCd>EUR</SttlmCcyCd>
           <HstCcyCd>EUR</HstCcyCd>
+          <AcctSvcrCtct>
+            <Nm>Commerzbank AG</Nm>
+          </AcctSvcrCtct>
         </AcctChrtcs>
         <Bal>
           <Tp>
@@ -47,24 +66,24 @@
           </Tp>
           <Val>
             <Amt Ccy="EUR">45.90</Amt>
+            <Sgn>true</Sgn>
           </Val>
-          <CdtDbtInd>DBIT</CdtDbtInd>
         </Bal>
         <Svc>
           <SvcDtl>
             <BkSvc>
               <Id>ACCTMAINT</Id>
               <SubSvc>
-                <Id>MONTHLY</Id>
                 <Issr>
-                  <Cd>BANK</Cd>
+                  <Cd>MACT</Cd>
                 </Issr>
+                <Id>MONTHLY</Id>
               </SubSvc>
               <Desc>Account maintenance fee</Desc>
               <CmonCd>
-                <Cd>A001</Cd>
+                <Issr>CMZ</Issr>
+                <Id>A001</Id>
               </CmonCd>
-              <SvcTp>STAN</SvcTp>
               <BkTxCd>
                 <Domn>
                   <Cd>ACMT</Cd>
@@ -74,6 +93,7 @@
                   </Fmly>
                 </Domn>
               </BkTxCd>
+              <SvcTp>STAN</SvcTp>
             </BkSvc>
             <Vol>1</Vol>
           </SvcDtl>
@@ -81,18 +101,21 @@
             <Ccy>EUR</Ccy>
             <UnitPric>
               <Amt Ccy="EUR">15.00</Amt>
+              <Sgn>false</Sgn>
             </UnitPric>
-            <Mtd>FLAT</Mtd>
+            <Mtd>FCHG</Mtd>
           </Pric>
-          <PmtMtd>DDBT</PmtMtd>
+          <PmtMtd>FLAT</PmtMtd>
           <OrgnlChrgPric>
             <Amt Ccy="EUR">15.00</Amt>
+            <Sgn>false</Sgn>
           </OrgnlChrgPric>
           <OrgnlChrgSttlmAmt>
             <Amt Ccy="EUR">15.00</Amt>
+            <Sgn>false</Sgn>
           </OrgnlChrgSttlmAmt>
           <TaxDsgnt>
-            <Cd>TAXB</Cd>
+            <Cd>TAXE</Cd>
           </TaxDsgnt>
         </Svc>
         <Svc>
@@ -100,11 +123,15 @@
             <BkSvc>
               <Id>WIRETRANSFER</Id>
               <SubSvc>
+                <Issr>
+                  <Cd>SEQN</Cd>
+                </Issr>
                 <Id>OUTGOING</Id>
               </SubSvc>
               <Desc>Outgoing wire transfer fee</Desc>
               <CmonCd>
-                <Cd>B002</Cd>
+                <Issr>CMZ</Issr>
+                <Id>B002</Id>
               </CmonCd>
               <SvcTp>STAN</SvcTp>
             </BkSvc>
@@ -114,15 +141,17 @@
             <Ccy>EUR</Ccy>
             <UnitPric>
               <Amt Ccy="EUR">5.00</Amt>
+              <Sgn>false</Sgn>
             </UnitPric>
-            <Mtd>UNIT</Mtd>
+            <Mtd>UPRC</Mtd>
           </Pric>
-          <PmtMtd>DDBT</PmtMtd>
+          <PmtMtd>BCMP</PmtMtd>
           <OrgnlChrgPric>
             <Amt Ccy="EUR">25.00</Amt>
+            <Sgn>false</Sgn>
           </OrgnlChrgPric>
           <TaxDsgnt>
-            <Cd>TAXB</Cd>
+            <Cd>ZERO</Cd>
           </TaxDsgnt>
         </Svc>
         <Svc>
@@ -131,7 +160,8 @@
               <Id>STMTPRINT</Id>
               <Desc>Paper statement fee</Desc>
               <CmonCd>
-                <Cd>C003</Cd>
+                <Issr>CMZ</Issr>
+                <Id>C003</Id>
               </CmonCd>
               <SvcTp>STAN</SvcTp>
             </BkSvc>
@@ -141,24 +171,31 @@
             <Ccy>EUR</Ccy>
             <UnitPric>
               <Amt Ccy="EUR">5.90</Amt>
+              <Sgn>false</Sgn>
             </UnitPric>
-            <Mtd>FLAT</Mtd>
+            <Mtd>STAM</Mtd>
           </Pric>
-          <PmtMtd>DDBT</PmtMtd>
+          <PmtMtd>INVS</PmtMtd>
           <OrgnlChrgPric>
             <Amt Ccy="EUR">5.90</Amt>
+            <Sgn>false</Sgn>
           </OrgnlChrgPric>
           <TaxDsgnt>
-            <Cd>EXMPT</Cd>
+            <Cd>XMPT</Cd>
           </TaxDsgnt>
         </Svc>
         <TaxRgn>
           <RgnNb>DE</RgnNb>
           <RgnNm>Germany</RgnNm>
           <CstmrTaxId>DE123456789</CstmrTaxId>
-          <TtlTaxAmt>
+          <SttlmAmt>
             <Amt Ccy="EUR">8.72</Amt>
-          </TtlTaxAmt>
+            <Sgn>false</Sgn>
+          </SttlmAmt>
+          <TaxDueToRgn>
+            <Amt Ccy="EUR">8.50</Amt>
+            <Sgn>false</Sgn>
+          </TaxDueToRgn>
         </TaxRgn>
       </BllgStmt>
     </BllgStmtGrp>
