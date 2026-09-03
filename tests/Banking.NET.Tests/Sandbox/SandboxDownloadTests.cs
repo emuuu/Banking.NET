@@ -192,7 +192,7 @@ public sealed class SandboxDownloadTests(SandboxFixture fixture, ITestOutputHelp
     }
 
     [Fact(SkipUnless = nameof(SandboxCredentials.Available), SkipType = typeof(SandboxCredentials), Skip = SkipReason)]
-    public async Task DownloadMessageAsync_Hac_LogsIdentifiedMessageType()
+    public async Task DownloadMessageAsync_Hac_ParsesAsPain002StatusReport()
     {
         var messages = await fixture.Client.ListMessagesAsync();
         var info = messages.FirstOrDefault(m => m.OrderType == OrderType.HAC);
@@ -203,17 +203,13 @@ public sealed class SandboxDownloadTests(SandboxFixture fixture, ITestOutputHelp
         var identifier = Iso20022Document.Identify(document);
         output.WriteLine($"HAC: type={identifier.Type}, identifier={identifier.Identifier}, namespace={identifier.Namespace}.");
 
-        if (identifier.Type == Iso20022MessageType.Pain002)
-        {
-            var status = Pain002Reader.Read(message);
-            status.OriginalGroup.OriginalMessageId.ShouldNotBeNullOrWhiteSpace();
-            status.OriginalGroup.OriginalMessageNameId.ShouldNotBeNullOrWhiteSpace();
-        }
-        else
-        {
-            document.Root.ShouldNotBeNull();
-            output.WriteLine($"HAC root element: {document.Root!.Name.LocalName}.");
-        }
+        identifier.Type.ShouldBe(
+            Iso20022MessageType.Pain002,
+            $"HAC messages are expected to identify as pain.002 status reports, but this one identified as {identifier.Type} ({identifier.Identifier}).");
+
+        var status = Pain002Reader.Read(message);
+        status.OriginalGroup.OriginalMessageId.ShouldNotBeNullOrWhiteSpace();
+        status.OriginalGroup.OriginalMessageNameId.ShouldNotBeNullOrWhiteSpace();
     }
 
     [Fact(SkipUnless = nameof(SandboxCredentials.Available), SkipType = typeof(SandboxCredentials), Skip = SkipReason)]

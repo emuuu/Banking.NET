@@ -264,7 +264,7 @@ public class Camt086ReaderTests
     public void Read_Camt086001_01Namespace_ParsesUsingLocalNames()
     {
         // The gateway's C86 mock message identifies as camt.086.001.01 rather than the documented
-        // camt.086.001.02; the reader matches elements by local name (D12) regardless of namespace,
+        // camt.086.001.02; the reader matches elements by local name regardless of namespace,
         // so both schema versions parse through the same code path.
         const string xml = """
             <Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.086.001.01">

@@ -329,6 +329,29 @@ public class Pain001WriterTests
         SchemaValidator.Validate(schemaFileName, xml).ShouldBeEmpty();
     }
 
+    [Theory]
+    [InlineData(Pain001Version.V03, "pain.001.001.03.xsd")]
+    [InlineData(Pain001Version.V09, "pain.001.001.09.xsd")]
+    public void Write_CreditorReferenceTypeProprietary_WritesPrtryAndValidatesAgainstSchema(Pain001Version version, string schemaFileName)
+    {
+        var initiation = MinimalInitiation();
+        initiation.PaymentInformations[0].Transactions[0].RemittanceInformation = new RemittanceInformation
+        {
+            CreditorReferenceTypeProprietary = "CUST",
+        };
+
+        var xml = Pain001Writer.WriteToString(initiation, version);
+        var document = XDocument.Parse(xml);
+
+        var ns = document.Root!.Name.Namespace;
+        var creditorRefInfo = document.Descendants(ns + "CdtrRefInf").Single();
+        creditorRefInfo.Element(ns + "Tp")!.Element(ns + "CdOrPrtry")!.Element(ns + "Prtry")!.Value.ShouldBe("CUST");
+        creditorRefInfo.Element(ns + "Tp")!.Element(ns + "CdOrPrtry")!.Element(ns + "Cd").ShouldBeNull();
+        creditorRefInfo.Element(ns + "Ref").ShouldBeNull();
+
+        SchemaValidator.Validate(schemaFileName, xml).ShouldBeEmpty();
+    }
+
     [Fact]
     public void Write_UltimateDebtorAndCreditor_WritesAtPaymentInformationAndTransactionLevel()
     {

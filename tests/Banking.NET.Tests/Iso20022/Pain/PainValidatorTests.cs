@@ -9,6 +9,7 @@ public class PainValidatorTests
 {
     private const string ValidIban1 = "DE89370400440532013000";
     private const string ValidIban2 = "DE02120300000000202051";
+    private const string ValidIban3 = "DE75512108001245126199";
     private const string ManipulatedIban = "DE89370400440532013001";
 
     private static CreditTransferInitiation ValidCreditTransfer() => new()
@@ -348,6 +349,17 @@ public class PainValidatorTests
     }
 
     [Fact]
+    public void ValidateCreditTransfer_AmountCurrencyWithTrailingNewline_ThrowsWithPath()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].Transactions[0].Amount = new Money(100.00m, "EUR\n");
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => ValidateCreditTransfer(initiation));
+
+        exception.Path.ShouldBe("PaymentInformations[0].Transactions[0].Amount.Currency");
+    }
+
+    [Fact]
     public void ValidateCreditTransfer_AmountAt18TotalDigits_DoesNotThrow()
     {
         var initiation = ValidCreditTransfer();
@@ -421,6 +433,17 @@ public class PainValidatorTests
     }
 
     [Fact]
+    public void ValidateCreditTransfer_DebtorAccountWithIbanAndWhitespaceOnlyOtherId_ThrowsWithOtherIdPath()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].DebtorAccount = new AccountIdentification { Iban = ValidIban1, OtherId = "   " };
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => ValidateCreditTransfer(initiation));
+
+        exception.Path.ShouldBe("PaymentInformations[0].DebtorAccount.OtherId");
+    }
+
+    [Fact]
     public void ValidateCreditTransfer_IbanAsDigitsOnly_ThrowsWithPath()
     {
         var initiation = ValidCreditTransfer();
@@ -448,6 +471,18 @@ public class PainValidatorTests
     {
         var initiation = ValidCreditTransfer();
         initiation.PaymentInformations[0].DebtorAccount.Iban = "de89 3704 0044 0532 0130 00";
+
+        Should.NotThrow(() => ValidateCreditTransfer(initiation));
+    }
+
+    [Theory]
+    [InlineData(ValidIban1)]
+    [InlineData(ValidIban2)]
+    [InlineData(ValidIban3)]
+    public void ValidateCreditTransfer_ValidIbanCheckDigits_DoesNotThrow(string iban)
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].DebtorAccount.Iban = iban;
 
         Should.NotThrow(() => ValidateCreditTransfer(initiation));
     }
@@ -754,6 +789,47 @@ public class PainValidatorTests
     }
 
     [Fact]
+    public void ValidateCreditTransfer_CreditorReferenceTypeCodeAndProprietaryBothSet_ThrowsWithPath()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].Transactions[0].RemittanceInformation = new RemittanceInformation
+        {
+            CreditorReferenceTypeCode = "SCOR",
+            CreditorReferenceTypeProprietary = "CUST",
+        };
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => ValidateCreditTransfer(initiation));
+
+        exception.Path.ShouldBe("PaymentInformations[0].Transactions[0].RemittanceInformation.CreditorReferenceTypeProprietary");
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_CreditorReferenceTypeProprietaryWhitespaceOnly_ThrowsWithPath()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].Transactions[0].RemittanceInformation = new RemittanceInformation
+        {
+            CreditorReferenceTypeProprietary = " ",
+        };
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => ValidateCreditTransfer(initiation));
+
+        exception.Path.ShouldBe("PaymentInformations[0].Transactions[0].RemittanceInformation.CreditorReferenceTypeProprietary");
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_CreditorReferenceTypeProprietaryWithoutReference_DoesNotThrow()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].Transactions[0].RemittanceInformation = new RemittanceInformation
+        {
+            CreditorReferenceTypeProprietary = "CUST",
+        };
+
+        Should.NotThrow(() => ValidateCreditTransfer(initiation));
+    }
+
+    [Fact]
     public void ValidateCreditTransfer_CreditorReferenceIssuerWithoutReference_DoesNotThrow()
     {
         var initiation = ValidCreditTransfer();
@@ -869,6 +945,17 @@ public class PainValidatorTests
     {
         var initiation = ValidCreditTransfer();
         initiation.PaymentInformations[0].DebtorAccount.Currency = "eur";
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => ValidateCreditTransfer(initiation));
+
+        exception.Path.ShouldBe("PaymentInformations[0].DebtorAccount.Currency");
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_DebtorAccountCurrencyWithTrailingNewline_ThrowsWithPath()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].DebtorAccount.Currency = "EUR\n";
 
         var exception = Should.Throw<Iso20022ValidationException>(() => ValidateCreditTransfer(initiation));
 

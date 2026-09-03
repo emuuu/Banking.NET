@@ -148,8 +148,9 @@ internal static class PainWriterHelpers
     /// <summary>
     /// Writes an <c>RmtInf</c> element for unstructured (<c>Ustrd</c>) or structured creditor reference
     /// (<c>Strd/CdtrRefInf</c>) remittance information, or <see langword="null"/> when neither is set.
-    /// <c>CdtrRefInf/Tp</c> is written whenever a type code or issuer is set, even without
-    /// <c>CdtrRefInf/Ref</c>, since both are independently optional per the XSD.
+    /// <c>CdtrRefInf/Tp</c> is written whenever a type code, a proprietary type, or an issuer is set, even
+    /// without <c>CdtrRefInf/Ref</c>, since all are independently optional per the XSD; <c>CdOrPrtry</c> writes
+    /// <c>Prtry</c> when a proprietary type is set, otherwise <c>Cd</c> (defaulting to <c>SCOR</c>).
     /// </summary>
     public static XElement? WriteRemittance(XNamespace ns, RemittanceInformation remittance)
     {
@@ -161,10 +162,13 @@ internal static class PainWriterHelpers
             return element;
         }
 
-        if (remittance.CreditorReference is not null || remittance.CreditorReferenceTypeCode is not null || remittance.CreditorReferenceIssuer is not null)
+        if (remittance.CreditorReference is not null || remittance.CreditorReferenceTypeCode is not null
+            || remittance.CreditorReferenceTypeProprietary is not null || remittance.CreditorReferenceIssuer is not null)
         {
-            var type = new XElement(ns + "Tp",
-                new XElement(ns + "CdOrPrtry", new XElement(ns + "Cd", remittance.CreditorReferenceTypeCode ?? "SCOR")));
+            var codeOrProprietary = remittance.CreditorReferenceTypeProprietary is { } proprietary
+                ? new XElement(ns + "Prtry", proprietary)
+                : new XElement(ns + "Cd", remittance.CreditorReferenceTypeCode ?? "SCOR");
+            var type = new XElement(ns + "Tp", new XElement(ns + "CdOrPrtry", codeOrProprietary));
             if (remittance.CreditorReferenceIssuer is { } issuer)
                 type.Add(new XElement(ns + "Issr", issuer));
 
