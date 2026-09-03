@@ -1,0 +1,118 @@
+@typeparam TResult
+@inject DocsCredentialService CredentialService
+@implements IDisposable
+
+<div class="try-it-panel">
+    <div class="panel-header d-flex align-items-center justify-content-between">
+        <span>Try It</span>
+        @if (_elapsed.HasValue)
+        {
+            <span class="badge bg-light text-dark">@_elapsed.Value.TotalMilliseconds.ToString("F0") ms</span>
+        }
+    </div>
+    <div class="panel-body">
+        @FormContent
+
+        <div class="d-flex gap-2 mt-3">
+            <button class="btn btn-primary" @onclick="Execute"
+                    disabled="@(!CredentialService.HasCredentials || _loading)">
+                @if (_loading)
+                {
+                    <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                }
+                Execute
+            </button>
+            @if (_result is not null || _error is not null)
+            {
+                <button class="btn btn-outline-secondary" @onclick="Clear">Clear</button>
+            }
+        </div>
+
+        @if (!CredentialService.HasCredentials)
+        {
+            <div class="text-muted small mt-2">Enter a sandbox Client ID and Client Secret in the header to enable execution.</div>
+        }
+
+        @if (_error is not null)
+        {
+            <div class="alert alert-danger mt-3 mb-0" role="alert">
+                <strong>Error:</strong> @_error
+            </div>
+        }
+
+        @if (_resultJson is not null)
+        {
+            <div class="result-area">
+                <h6 class="mt-3 mb-2">Response</h6>
+                <pre><code>@_resultJson</code></pre>
+            </div>
+        }
+    </div>
+</div>
+
+@code {
+    [Parameter] public RenderFragment? FormContent { get; set; }
+    [Parameter, EditorRequired] public Func<Task<TResult>> OnExecute { get; set; } = default!;
+
+    protected override void OnInitialized() => CredentialService.CredentialsChanged += OnCredentialsChanged;
+    private void OnCredentialsChanged() => InvokeAsync(StateHasChanged);
+    public void Dispose() => CredentialService.CredentialsChanged -= OnCredentialsChanged;
+
+    private bool _loading;
+    private TResult? _result;
+    private string? _resultJson;
+    private string? _error;
+    private TimeSpan? _elapsed;
+
+    private async Task Execute()
+    {
+        _error = null;
+        _resultJson = null;
+        _result = default;
+        _loading = true;
+        StateHasChanged();
+
+        var sw = System.Diagnostics.Stopwatch.StartNew();
+        try
+        {
+            _result = await OnExecute();
+            sw.Stop();
+            _elapsed = sw.Elapsed;
+            _resultJson = System.Text.Json.JsonSerializer.Serialize(_result, new System.Text.Json.JsonSerializerOptions
+            {
+                WriteIndented = true,
+                PropertyNamingPolicy = System.Text.Json.JsonNamingPolicy.CamelCase,
+                DefaultIgnoreCondition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull
+            });
+        }
+        catch (Exception ex)
+        {
+            sw.Stop();
+            _elapsed = sw.Elapsed;
+            _error = DescribeError(ex);
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private static string DescribeError(Exception ex)
+    {
+        var message = ex.Message;
+        if (ex is CommerzbankException cbEx && cbEx.CorrelationId is not null)
+            message += $" (CorrelationId: {cbEx.CorrelationId})";
+        if (message.Contains("Failed to fetch", StringComparison.OrdinalIgnoreCase))
+            message += " — the sandbox may not allow this cross-origin request yet; credentials stay in your browser either way.";
+        return message;
+    }
+
+    private void Clear()
+    {
+        _result = default;
+        _resultJson = null;
+        _error = null;
+        _elapsed = null;
+    }
+}

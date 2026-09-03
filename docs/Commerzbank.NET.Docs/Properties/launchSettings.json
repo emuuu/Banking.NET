@@ -1,0 +1,12 @@
+{
+  "profiles": {
+    "Commerzbank.NET.Docs": {
+      "commandName": "Project",
+      "launchBrowser": true,
+      "environmentVariables": {
+        "ASPNETCORE_ENVIRONMENT": "Development"
+      },
+      "applicationUrl": "https://localhost:58891;http://localhost:58892"
+    }
+  }
+}

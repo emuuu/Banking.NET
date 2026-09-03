@@ -1,0 +1,211 @@
+@page "/playground/download"
+@using System.Globalization
+@using System.Xml.Linq
+@inject CorporatePaymentsClientFactory ClientFactory
+@inject DocsCredentialService CredentialService
+
+<PageTitle>Download - Commerzbank.NET Docs</PageTitle>
+
+<div class="doc-content">
+    <h1>Download</h1>
+    <p class="lead text-muted">Downloads a message (all fragments concatenated) and shows its content type, size, and — for a recognized ISO 20022 document under 2 MB — a pretty-printed preview and summary.</p>
+
+    <CredentialsWarning />
+
+    <div class="try-it-panel">
+        <div class="panel-header">Download message</div>
+        <div class="panel-body">
+            <div class="row g-2 align-items-end">
+                <div class="col-auto">
+                    <label class="form-label small mb-1" for="downloadMessageId">Message ID</label>
+                    <input id="downloadMessageId" class="form-control form-control-sm" style="max-width:280px;"
+                           @bind="_messageId" @bind:event="oninput" />
+                </div>
+                <div class="col-auto">
+                    <button class="btn btn-primary" @onclick="DownloadAsync"
+                            disabled="@(!CredentialService.HasCredentials || _loading || string.IsNullOrWhiteSpace(_messageId))">
+                        @if (_loading)
+                        {
+                            <span class="spinner-border spinner-border-sm me-1" role="status"></span>
+                        }
+                        Download
+                    </button>
+                </div>
+            </div>
+
+            @if (!CredentialService.HasCredentials)
+            {
+                <div class="text-muted small mt-2">Enter a sandbox Client ID and Client Secret in the header to enable execution.</div>
+            }
+
+            @if (_error is not null)
+            {
+                <div class="alert alert-danger mt-3 mb-0" role="alert"><strong>Error:</strong> @_error</div>
+            }
+
+            @if (_message is not null)
+            {
+                <div class="table-responsive mt-3">
+                    <table class="table table-sm">
+                        <tbody>
+                            <tr><th scope="row">Content-Type</th><td>@(_message.ContentType ?? "—")</td></tr>
+                            <tr><th scope="row">Size</th><td>@FormatSize(_message.Content.Length)</td></tr>
+                            <tr><th scope="row">Fragments</th><td>@_message.FragmentCount</td></tr>
+                            <tr><th scope="row">Gzip-compressed</th><td>@(_message.IsGzip ? "Yes" : "No")</td></tr>
+                            @if (_identifier is { } identifier)
+                            {
+                                <tr><th scope="row">Detected type</th><td><code>@(identifier.Type == Iso20022MessageType.Unknown ? "Unknown" : identifier.Identifier)</code></td></tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                @if (_summary is { Count: > 0 })
+                {
+                    <h6 class="mt-3">Summary</h6>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <tbody>
+                                @foreach (var (label, value) in _summary)
+                                {
+                                    <tr><th scope="row">@label</th><td>@value</td></tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+
+                @if (_prettyXml is not null)
+                {
+                    <h6 class="mt-3">Content</h6>
+                    <CodeBlock Language="xml" Code="@_prettyXml" MaxHeight="500px" />
+                }
+                else if (_message.Content.Length > PreviewSizeLimit)
+                {
+                    <div class="alert alert-secondary small mt-3 mb-0">
+                        Content is @FormatSize(_message.Content.Length), larger than the @FormatSize(PreviewSizeLimit) preview limit — not rendered inline.
+                        Use <code>CorporatePaymentsMessage.OpenContentStream()</code> to process it without buffering it as a string.
+                    </div>
+                }
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private const long PreviewSizeLimit = 2 * 1024 * 1024;
+
+    [SupplyParameterFromQuery]
+    public string? MessageId { get; set; }
+
+    private string _messageId = "";
+    private bool _loading;
+    private string? _error;
+    private CorporatePaymentsMessage? _message;
+    private Iso20022MessageIdentifier? _identifier;
+    private string? _prettyXml;
+    private List<(string Label, string Value)>? _summary;
+
+    protected override void OnInitialized()
+    {
+        if (!string.IsNullOrWhiteSpace(MessageId))
+            _messageId = MessageId;
+    }
+
+    private async Task DownloadAsync()
+    {
+        var client = ClientFactory.Client;
+        if (client is null || string.IsNullOrWhiteSpace(_messageId)) return;
+
+        _loading = true;
+        _error = null;
+        _message = null;
+        _identifier = null;
+        _prettyXml = null;
+        _summary = null;
+        StateHasChanged();
+
+        try
+        {
+            _message = await client.DownloadMessageAsync(_messageId.Trim());
+
+            if (_message.Content.Length <= PreviewSizeLimit)
+            {
+                var xml = _message.GetContentAsString();
+                var document = Iso20022Document.Load(xml);
+                var identifier = Iso20022Document.Identify(document);
+                _identifier = identifier;
+                _prettyXml = document.ToString();
+                _summary = BuildSummary(identifier.Type, document);
+            }
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            _loading = false;
+            StateHasChanged();
+        }
+    }
+
+    private static List<(string, string)> BuildSummary(Iso20022MessageType type, XDocument document) => type switch
+    {
+        Iso20022MessageType.Camt052 or Iso20022MessageType.Camt053 or Iso20022MessageType.Camt054 => SummarizeCamt(document),
+        Iso20022MessageType.Camt086 => SummarizeCamt086(document),
+        Iso20022MessageType.Pain002 => SummarizePain002(document),
+        _ => []
+    };
+
+    private static List<(string, string)> SummarizeCamt(XDocument document)
+    {
+        var message = CamtReader.Read(document);
+        var result = new List<(string, string)>
+        {
+            ("Message ID", message.GroupHeader.MessageId ?? "—"),
+            ("Statements", message.Statements.Count.ToString(CultureInfo.InvariantCulture))
+        };
+
+        var first = message.Statements.FirstOrDefault();
+        if (first is not null)
+        {
+            result.Add(("Account", first.Account?.Iban ?? first.Account?.OtherId ?? "—"));
+            result.Add(("Entries", first.Entries.Count.ToString(CultureInfo.InvariantCulture)));
+            result.Add(("Balances", first.Balances.Count.ToString(CultureInfo.InvariantCulture)));
+        }
+
+        return result;
+    }
+
+    private static List<(string, string)> SummarizeCamt086(XDocument document)
+    {
+        var message = Camt086Reader.Read(document);
+        var statementCount = message.Groups.Sum(g => g.Statements.Count);
+        return
+        [
+            ("Report ID", message.ReportId ?? "—"),
+            ("Groups", message.Groups.Count.ToString(CultureInfo.InvariantCulture)),
+            ("Statements", statementCount.ToString(CultureInfo.InvariantCulture))
+        ];
+    }
+
+    private static List<(string, string)> SummarizePain002(XDocument document)
+    {
+        var report = Pain002Reader.Read(document);
+        return
+        [
+            ("Message ID", report.MessageId ?? "—"),
+            ("Original message ID", report.OriginalGroup.OriginalMessageId ?? "—"),
+            ("Group status", report.OriginalGroup.GroupStatus ?? "—"),
+            ("Payment informations", report.PaymentInformations.Count.ToString(CultureInfo.InvariantCulture))
+        ];
+    }
+
+    private static string FormatSize(long bytes)
+    {
+        if (bytes < 1024) return $"{bytes} B";
+        if (bytes < 1024 * 1024) return $"{bytes / 1024.0:F1} KB";
+        return $"{bytes / (1024.0 * 1024.0):F1} MB";
+    }
+}

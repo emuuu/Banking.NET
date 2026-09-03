@@ -8,4 +8,8 @@
   <Folder Name="/samples/">
     <Project Path="samples/Commerzbank.NET.Samples.Console/Commerzbank.NET.Samples.Console.csproj" />
   </Folder>
+  <Folder Name="/docs/">
+    <Project Path="docs/Commerzbank.NET.Docs/Commerzbank.NET.Docs.csproj" />
+    <Project Path="docs/Commerzbank.NET.Docs.Generator/Commerzbank.NET.Docs.Generator.csproj" />
+  </Folder>
 </Solution>

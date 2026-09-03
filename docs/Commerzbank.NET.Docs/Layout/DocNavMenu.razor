@@ -1,0 +1,183 @@
+@inject IDocContentService ContentService
+@inject IRestApiDocService ApiDocService
+@inject NavigationManager Navigation
+@inject IJSRuntime JS
+@implements IDisposable
+
+<div class="nav-menu p-3">
+    <div class="nav-filter mb-3">
+        <input type="text" class="form-control form-control-sm" placeholder="Filter..."
+               @bind="_filter" @bind:event="oninput" />
+    </div>
+
+    @foreach (var section in ContentService.GetNavSections())
+    {
+        var visibleItems = section.Items
+            .Where(i => Matches(i.Title))
+            .ToList();
+        if (visibleItems.Count == 0) continue;
+
+        <h6 class="nav-section-title text-uppercase fw-bold mt-3 mb-2">@(section.Category)</h6>
+        <ul class="nav flex-column">
+            @foreach (var item in visibleItems)
+            {
+                var href = $"docs/{item.Slug}";
+                <li class="nav-item">
+                    <NavLink class="nav-link py-1" href="@href" Match="NavLinkMatch.All"
+                             @onclick="() => OnNavigate.InvokeAsync()">
+                        @item.Title
+                    </NavLink>
+                </li>
+            }
+        </ul>
+    }
+
+    @{
+        var playgroundItems = PlaygroundPages.Where(p => Matches(p.Title)).ToList();
+    }
+    @if (playgroundItems.Count > 0)
+    {
+        <hr class="my-3" />
+        <h6 class="nav-section-title text-uppercase fw-bold mt-3 mb-2">Playground</h6>
+        <ul class="nav flex-column">
+            @foreach (var navPage in playgroundItems)
+            {
+                <li class="nav-item">
+                    <NavLink class="nav-link py-1" href="@navPage.Href"
+                             @onclick="() => OnNavigate.InvokeAsync()">
+                        @navPage.Title
+                    </NavLink>
+                </li>
+            }
+        </ul>
+    }
+
+    @{
+        var toolItems = ToolPages.Where(p => Matches(p.Title)).ToList();
+    }
+    @if (toolItems.Count > 0)
+    {
+        <hr class="my-3" />
+        <h6 class="nav-section-title text-uppercase fw-bold mt-3 mb-2">Offline Tools</h6>
+        <ul class="nav flex-column">
+            @foreach (var navPage in toolItems)
+            {
+                <li class="nav-item">
+                    <NavLink class="nav-link py-1" href="@navPage.Href"
+                             @onclick="() => OnNavigate.InvokeAsync()">
+                        @navPage.Title
+                    </NavLink>
+                </li>
+            }
+        </ul>
+    }
+
+    @{
+        var hasOverview = Matches("Overview");
+        var filteredGroups = ApiDocService.GroupOrder
+            .Select(group => (
+                Group: group,
+                Items: BuildGroupItems(group).Where(i => Matches(i.Name)).ToList()
+            ))
+            .ToList();
+        var anyApi = hasOverview || filteredGroups.Any(g => g.Items.Count > 0);
+    }
+
+    @if (anyApi)
+    {
+        <hr class="my-3" />
+        <h6 class="nav-section-title text-uppercase fw-bold mt-3 mb-2">API Reference</h6>
+
+        @if (hasOverview)
+        {
+            <ul class="nav flex-column">
+                <li class="nav-item">
+                    <NavLink class="nav-link py-1" href="api" Match="NavLinkMatch.All"
+                             @onclick="() => OnNavigate.InvokeAsync()">
+                        Overview
+                    </NavLink>
+                </li>
+            </ul>
+        }
+
+        @foreach (var group in filteredGroups)
+        {
+            if (group.Items.Count == 0) continue;
+
+            <h6 class="nav-subsection-title text-muted fw-semibold mt-2 mb-1"
+                style="font-size:.75rem;padding-left:.5rem;">@group.Group</h6>
+            <ul class="nav flex-column">
+                @foreach (var item in group.Items)
+                {
+                    <li class="nav-item">
+                        <NavLink class="nav-link py-1" href="@($"api/{item.Name}")"
+                                 @onclick="() => OnNavigate.InvokeAsync()">
+                            @item.Name
+                        </NavLink>
+                    </li>
+                }
+            </ul>
+        }
+    }
+</div>
+
+@code {
+    [Parameter] public EventCallback OnNavigate { get; set; }
+
+    private string _filter = "";
+    private bool _needsScroll;
+
+    private static readonly (string Title, string Href)[] PlaygroundPages =
+    [
+        ("Heartbeat", "playground/heartbeat"),
+        ("Messages", "playground/messages"),
+        ("Download", "playground/download"),
+        ("Confirm", "playground/confirm"),
+        ("Submit", "playground/submit"),
+    ];
+
+    private static readonly (string Title, string Href)[] ToolPages =
+    [
+        ("Parse camt / pain.002", "tools/parse-iso20022"),
+        ("Build pain.001", "tools/build-pain001"),
+        ("Build pain.008", "tools/build-pain008"),
+    ];
+
+    private bool Matches(string title) =>
+        string.IsNullOrWhiteSpace(_filter) ||
+        title.Contains(_filter.Trim(), StringComparison.OrdinalIgnoreCase);
+
+    private List<(string Name, string Kind)> BuildGroupItems(string group) =>
+        ApiDocService.GetTypesByGroup(group).Select(t => (t.Name, t.Kind))
+            .Concat(ApiDocService.GetEnumsByGroup(group).Select(e => (e.Name, "Enum")))
+            .OrderBy(i => i.Name, StringComparer.Ordinal)
+            .ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        await ContentService.InitializeAsync();
+        await ApiDocService.InitializeAsync();
+        Navigation.LocationChanged += OnLocationChanged;
+        _needsScroll = true;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (_needsScroll || firstRender)
+        {
+            _needsScroll = false;
+            await JS.InvokeVoidAsync("BlazorDocs.scrollNavToActive");
+        }
+    }
+
+    private void OnLocationChanged(object? sender, Microsoft.AspNetCore.Components.Routing.LocationChangedEventArgs e)
+    {
+        _needsScroll = true;
+        InvokeAsync(StateHasChanged);
+    }
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= OnLocationChanged;
+    }
+}

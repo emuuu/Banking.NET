@@ -1,0 +1,85 @@
+@page "/playground/submit"
+@inject CorporatePaymentsClientFactory ClientFactory
+
+<PageTitle>Submit - Commerzbank.NET Docs</PageTitle>
+
+<div class="doc-content">
+    <h1>Submit</h1>
+    <p class="lead text-muted">
+        Submits an order to the sandbox. The textarea is prefilled with a pain.001 sample built via
+        <code>Pain001Writer</code> using fictional test data — edit it, or replace it with a pain.008 document for a
+        direct debit order type.
+    </p>
+
+    <CredentialsWarning />
+
+    <TryItPanel TResult="OrderSubmissionResult" OnExecute="ExecuteAsync">
+        <FormContent>
+            <div class="row g-2 mb-2">
+                <div class="col-auto">
+                    <label class="form-label small mb-1" for="submitOrderType">Order type</label>
+                    <select id="submitOrderType" class="form-select form-select-sm" @bind="_orderTypeCode">
+                        @foreach (var orderType in OrderType.UploadTypes)
+                        {
+                            <option value="@orderType.Code">@orderType.Code — @orderType.Description</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-auto d-flex align-items-end">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="submitGzip" @bind="_compress" />
+                        <label class="form-check-label" for="submitGzip">gzip-compress</label>
+                    </div>
+                </div>
+            </div>
+            <textarea class="form-control font-monospace" style="min-height:260px;font-size:.8rem;"
+                      @bind="_xml" @bind:event="oninput"></textarea>
+        </FormContent>
+    </TryItPanel>
+</div>
+
+@code {
+    private string _orderTypeCode = OrderType.CCT.Code;
+    private bool _compress;
+    private string _xml = BuildSampleXml();
+
+    private async Task<OrderSubmissionResult> ExecuteAsync()
+    {
+        var client = ClientFactory.Client ?? throw new InvalidOperationException("Enter sandbox credentials first.");
+        var orderType = OrderType.Parse(_orderTypeCode);
+        return await client.SubmitOrderAsync(orderType, _xml, _compress);
+    }
+
+    private static string BuildSampleXml()
+    {
+        var initiation = new CreditTransferInitiation
+        {
+            MessageId = "SAMPLE-MSG-0001",
+            InitiatingParty = new PartyIdentification { Name = "Example Debtor GmbH" },
+            PaymentInformations =
+            [
+                new CreditTransferPaymentInformation
+                {
+                    PaymentInformationId = "SAMPLE-PMTINF-0001",
+                    RequestedExecutionDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)),
+                    Debtor = new PartyIdentification { Name = "Example Debtor GmbH" },
+                    DebtorAccount = new AccountIdentification { Iban = "DE89370400440532013000" },
+                    DebtorAgent = new FinancialInstitution { Bic = "COBADEFFXXX" },
+                    Transactions =
+                    [
+                        new CreditTransferTransaction
+                        {
+                            EndToEndId = "SAMPLE-E2E-0001",
+                            Amount = new Money(100.00m, "EUR"),
+                            Creditor = new PartyIdentification { Name = "Example Creditor Ltd" },
+                            CreditorAccount = new AccountIdentification { Iban = "DE02120300000000202051" },
+                            RemittanceInformation = new RemittanceInformation { Unstructured = ["Sample payment"] }
+                        }
+                    ]
+                }
+            ]
+        };
+
+        return Pain001Writer.WriteToString(initiation, Pain001Version.V09);
+    }
+}

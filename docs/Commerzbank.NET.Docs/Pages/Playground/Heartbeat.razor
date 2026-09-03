@@ -1,0 +1,24 @@
+@page "/playground/heartbeat"
+@inject CorporatePaymentsClientFactory ClientFactory
+
+<PageTitle>Heartbeat - Commerzbank.NET Docs</PageTitle>
+
+<div class="doc-content">
+    <h1>Heartbeat</h1>
+    <p class="lead text-muted">Calls the sandbox heartbeat endpoint to verify connectivity and authentication.</p>
+
+    <CredentialsWarning />
+
+    <TryItPanel TResult="HeartbeatResult" OnExecute="ExecuteAsync" />
+</div>
+
+@code {
+    private async Task<HeartbeatResult> ExecuteAsync()
+    {
+        var client = ClientFactory.Client ?? throw new InvalidOperationException("Enter sandbox credentials first.");
+        await client.HeartbeatAsync();
+        return new HeartbeatResult("OK", DateTimeOffset.Now);
+    }
+
+    private sealed record HeartbeatResult(string Status, DateTimeOffset CheckedAt);
+}
