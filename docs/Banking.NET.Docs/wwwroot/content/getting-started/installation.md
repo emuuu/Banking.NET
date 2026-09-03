@@ -42,6 +42,6 @@ using Banking.NET.Commerzbank.Exceptions;
 
 ## Next Steps
 
-- [Quick Start](/docs/getting-started/quick-start) — Register the client and make your first call
-- [Authentication](/docs/getting-started/authentication) — Understand the OAuth 2.0 client credentials flow
-- [Configuration](/docs/getting-started/configuration) — Customize timeouts, certificates and the API environment
+- [Quick Start](docs/getting-started/quick-start) — Register the client and make your first call
+- [Authentication](docs/getting-started/authentication) — Understand the OAuth 2.0 client credentials flow
+- [Configuration](docs/getting-started/configuration) — Customize timeouts, certificates and the API environment

@@ -7,6 +7,7 @@ using YamlDotNet.Serialization.NamingConventions;
 
 namespace Banking.NET.Docs.Services;
 
+/// <inheritdoc />
 public partial class DocContentService : IDocContentService
 {
     private readonly HttpClient _http;
@@ -16,6 +17,7 @@ public partial class DocContentService : IDocContentService
     private readonly Dictionary<string, DocArticle> _cache = new();
     private readonly MarkdownPipeline _pipeline;
 
+    /// <param name="http">The HTTP client the generated content index and markdown files are fetched with.</param>
     public DocContentService(HttpClient http)
     {
         _http = http;
@@ -26,6 +28,7 @@ public partial class DocContentService : IDocContentService
             .Build();
     }
 
+    /// <inheritdoc />
     public async Task InitializeAsync()
     {
         if (_index is not null) return;
@@ -43,8 +46,10 @@ public partial class DocContentService : IDocContentService
         BuildSearchEntries();
     }
 
+    /// <inheritdoc />
     public List<NavSection> GetNavSections() => _navSections ?? [];
 
+    /// <inheritdoc />
     public List<SearchEntry> Search(string query)
     {
         if (string.IsNullOrWhiteSpace(query) || _searchEntries is null)
@@ -80,6 +85,7 @@ public partial class DocContentService : IDocContentService
             .ToList();
     }
 
+    /// <inheritdoc />
     public async Task<DocArticle?> GetArticleAsync(string slug)
     {
         if (_cache.TryGetValue(slug, out var cached))

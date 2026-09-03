@@ -28,8 +28,9 @@ straight to `SubmitOrderAsync(orderType, xml)` or `SubmitOrderAsync(orderType, c
 ## Building a Credit Transfer
 
 The examples below use only the fixed test data documented for this library: the German test IBANs
-`DE89370400440532013000`, `DE02120300000000202051`, the Commerzbank AG BIC `COBADEFFXXX`, and the
-placeholder names `Example Debtor GmbH` / `Example Creditor Ltd`.
+`DE89370400440532013000`, `DE02120300000000202051` and `DE75512108001245126199` (used in the direct
+debit example further down), the Commerzbank AG BIC `COBADEFFXXX`, and the placeholder names
+`Example Debtor GmbH` / `Example Creditor Ltd`.
 
 ```csharp
 using Banking.NET.Commerzbank.CorporatePayments.Iso20022;
@@ -163,10 +164,12 @@ Validation covers, among other things:
   format and checksum (mod 97) once normalized.
 - BIC format, version-dependent (`BICFIDec2014Identifier` for the newer schema versions,
   `BICIdentifier` for the older ones).
-- Optional text fields that are set must be non-empty (never just whitespace) — the writer never
-  emits an empty element.
+- Optional identifiers and names that are set must be non-empty (never just whitespace-only) — the
+  writer never emits an empty element for those. Unstructured remittance information lines are the
+  exception: they are checked for length and character set, but not for being empty or
+  whitespace-only, so a blank line is passed through as written.
 
 ## Next Steps
 
-- [Submitting Orders](/docs/guides/submitting-orders)
-- [ISO 20022: Reading pain.002 Messages](/docs/guides/iso20022-reading-pain002) — Reading back the status of a submitted order
+- [Submitting Orders](docs/guides/submitting-orders)
+- [ISO 20022: Reading pain.002 Messages](docs/guides/iso20022-reading-pain002) — Reading back the status of a submitted order

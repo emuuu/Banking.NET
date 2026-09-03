@@ -110,5 +110,5 @@ forwarded to the delegate.
 
 ## Next Steps
 
-- [Authentication](/docs/getting-started/authentication) — Token lifecycle and mutual TLS details
-- [Quick Start](/docs/getting-started/quick-start) — Register the client and make your first call
+- [Authentication](docs/getting-started/authentication) — Token lifecycle and mutual TLS details
+- [Quick Start](docs/getting-started/quick-start) — Register the client and make your first call

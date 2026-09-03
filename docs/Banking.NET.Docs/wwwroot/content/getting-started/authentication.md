@@ -48,7 +48,7 @@ a new client credentials request otherwise. This all happens transparently — a
 ever sees `ICorporatePaymentsClient` calls succeed or fail.
 
 To supply tokens from an external source instead (e.g. a shared token cache across services), set
-`CommerzbankOptions.AccessTokenProvider` — see [Configuration](/docs/getting-started/configuration).
+`CommerzbankOptions.AccessTokenProvider` — see [Configuration](docs/getting-started/configuration).
 
 ## How the Bearer Token Is Attached
 
@@ -66,16 +66,19 @@ On every request it:
 No other status codes trigger a retry. Rate limiting or transient server errors are the caller's
 responsibility to handle (e.g. via a Polly policy registered on the named HTTP client).
 
-## Sandbox: No CORS Preflight on the Token Request
+## Sandbox: Not Usable from a Browser
 
-The sandbox token endpoint answers a form-urlencoded POST as a CORS "simple request" — no
-`OPTIONS` preflight is required, and the response carries `Access-Control-Allow-Origin` for the
-calling origin. This means a browser can call the sandbox token endpoint directly, which is what the
-docs site playground relies on.
+The gateway (`/heartbeat`, `/messages`, ...) answers CORS preflight (`OPTIONS`) requests, which
+looks like an invitation to call it directly from a browser. It isn't one: an authenticated request
+that also carries an `Origin` header — i.e. any real `fetch`/`XHR` call — is answered with **403**
+and no `Access-Control-Allow-Origin` header, so the browser blocks the response before the caller
+ever sees it. The same request without a token returns HTTP 400 (not 401) with a
+`WWW-Authenticate` challenge instead — see [Error Handling](docs/guides/error-handling).
 
-The gateway itself (`/heartbeat`, `/messages`, ...) does support full CORS preflighting, but calling
-it without a valid token returns HTTP 400 (not 401) with a `WWW-Authenticate` challenge — see
-[Error Handling](/docs/guides/error-handling).
+The token endpoint is no better: a client credentials POST with an `Origin` header returns HTTP 200,
+but again without `Access-Control-Allow-Origin`, so a browser cannot read the token even though the
+request succeeded server-side. In practice, the Corporate Payments API can only be used from
+server-side or desktop applications — not directly from a browser.
 
 ## Production: Mutual TLS Required
 
@@ -91,11 +94,11 @@ The certificate is obtained through a certificate signing request (CSR) process 
 
 Configure the certificate on `CommerzbankOptions` (object, PKCS#12 file, or PEM file pair) and set
 `Environment = CommerzbankEnvironment.Production`. See
-[Configuration](/docs/getting-started/configuration) for the exact properties and
-[Production Checklist](/docs/guides/production-checklist) for the full go-live checklist.
+[Configuration](docs/getting-started/configuration) for the exact properties and
+[Production Checklist](docs/guides/production-checklist) for the full go-live checklist.
 
 ## Next Steps
 
-- [Configuration](/docs/getting-started/configuration) — All `CommerzbankOptions` properties
-- [Quick Start](/docs/getting-started/quick-start) — Register the client and make your first call
-- [Error Handling](/docs/guides/error-handling) — How authentication failures surface as exceptions
+- [Configuration](docs/getting-started/configuration) — All `CommerzbankOptions` properties
+- [Quick Start](docs/getting-started/quick-start) — Register the client and make your first call
+- [Error Handling](docs/guides/error-handling) — How authentication failures surface as exceptions

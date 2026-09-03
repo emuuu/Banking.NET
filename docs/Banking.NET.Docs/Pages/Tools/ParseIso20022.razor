@@ -1,5 +1,6 @@
 @page "/tools/parse-iso20022"
 @using System.Globalization
+@using System.Text
 @using System.Xml.Linq
 
 <PageTitle>Parse camt / pain.002 - Banking.NET Docs</PageTitle>
@@ -17,6 +18,7 @@
         <div class="panel-body">
             <textarea class="form-control font-monospace" style="min-height:220px;font-size:.8rem;" placeholder="Paste XML here..."
                       @bind="_xml" @bind:event="oninput"></textarea>
+            <div class="form-text">Documents larger than @(MaxDocumentSizeBytes / (1024 * 1024)) MB are not parsed.</div>
             <div class="d-flex gap-2 mt-3">
                 <button class="btn btn-primary" @onclick="Parse" disabled="@string.IsNullOrWhiteSpace(_xml)">Parse</button>
                 @if (_error is not null || _identifier is not null)
@@ -129,6 +131,8 @@
 </div>
 
 @code {
+    private const int MaxDocumentSizeBytes = 2 * 1024 * 1024;
+
     private string _xml = "";
     private string? _error;
     private Iso20022MessageIdentifier? _identifier;
@@ -140,6 +144,12 @@
     private void Parse()
     {
         Clear();
+
+        if (Encoding.UTF8.GetByteCount(_xml) > MaxDocumentSizeBytes)
+        {
+            _error = $"The document is larger than {MaxDocumentSizeBytes / (1024 * 1024)} MB and was not parsed.";
+            return;
+        }
 
         try
         {

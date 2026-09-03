@@ -98,9 +98,9 @@ foreach (var uploadType in OrderType.UploadTypes)
 
 `ListMessagesAsync` and `DownloadMessageAsync` accept any order type, but `SubmitOrderAsync` throws
 `ArgumentException` when passed a download order type — see
-[Submitting Orders](/docs/guides/submitting-orders).
+[Submitting Orders](docs/guides/submitting-orders).
 
 ## Next Steps
 
-- [Downloading Messages](/docs/guides/downloading-messages)
-- [Submitting Orders](/docs/guides/submitting-orders)
+- [Downloading Messages](docs/guides/downloading-messages)
+- [Submitting Orders](docs/guides/submitting-orders)

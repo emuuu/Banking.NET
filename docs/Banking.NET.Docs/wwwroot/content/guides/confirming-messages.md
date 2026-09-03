@@ -34,7 +34,7 @@ await client.ConfirmMessageAsync(messageId, ReceivedStatus.Complete);
 ```
 
 Because confirming as `Complete` is irreversible from the client's point of view, only confirm once
-processing has genuinely finished — see [Production Checklist](/docs/guides/production-checklist) for
+processing has genuinely finished — see [Production Checklist](docs/guides/production-checklist) for
 the operational implications.
 
 ## FetchMessagesAsync: List, Download and Confirm in One Sequence
@@ -102,5 +102,5 @@ When the exception that caused the confirmation failure is itself a `Commerzbank
 
 ## Next Steps
 
-- [Downloading Messages](/docs/guides/downloading-messages)
-- [Error Handling](/docs/guides/error-handling)
+- [Downloading Messages](docs/guides/downloading-messages)
+- [Error Handling](docs/guides/error-handling)

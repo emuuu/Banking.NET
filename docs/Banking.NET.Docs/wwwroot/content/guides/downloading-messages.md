@@ -101,6 +101,6 @@ the zero-based fragment index; `IsPartial` is `true` when the gateway answered w
 
 ## Next Steps
 
-- [Confirming Messages](/docs/guides/confirming-messages) — Telling the bank a message was received
-- [ISO 20022: Reading camt Messages](/docs/guides/iso20022-reading-camt)
-- [ISO 20022: Reading pain.002 Messages](/docs/guides/iso20022-reading-pain002)
+- [Confirming Messages](docs/guides/confirming-messages) — Telling the bank a message was received
+- [ISO 20022: Reading camt Messages](docs/guides/iso20022-reading-camt)
+- [ISO 20022: Reading pain.002 Messages](docs/guides/iso20022-reading-pain002)

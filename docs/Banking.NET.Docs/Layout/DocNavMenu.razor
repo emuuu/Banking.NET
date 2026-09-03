@@ -110,7 +110,7 @@
                 @foreach (var item in group.Items)
                 {
                     <li class="nav-item">
-                        <NavLink class="nav-link py-1" href="@($"api/{item.Name}")"
+                        <NavLink class="nav-link py-1" href="@($"api/{item.Slug}")"
                                  @onclick="() => OnNavigate.InvokeAsync()">
                             @item.Name
                         </NavLink>
@@ -147,9 +147,9 @@
         string.IsNullOrWhiteSpace(_filter) ||
         title.Contains(_filter.Trim(), StringComparison.OrdinalIgnoreCase);
 
-    private List<(string Name, string Kind)> BuildGroupItems(string group) =>
-        ApiDocService.GetTypesByGroup(group).Select(t => (t.Name, t.Kind))
-            .Concat(ApiDocService.GetEnumsByGroup(group).Select(e => (e.Name, "Enum")))
+    private List<(string Name, string Slug, string Kind)> BuildGroupItems(string group) =>
+        ApiDocService.GetTypesByGroup(group).Select(t => (t.Name, t.Slug, t.Kind))
+            .Concat(ApiDocService.GetEnumsByGroup(group).Select(e => (e.Name, e.Slug, "Enum")))
             .OrderBy(i => i.Name, StringComparer.Ordinal)
             .ToList();
 

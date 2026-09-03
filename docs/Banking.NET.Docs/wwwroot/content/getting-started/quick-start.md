@@ -67,13 +67,13 @@ if (messages.Count > 0)
 
 `DownloadMessageAsync(MessageInfo, ...)` uses the fragment count already known from
 `ListMessagesAsync`; an overload taking just the message ID is also available when you only have the
-identifier. See [Downloading Messages](/docs/guides/downloading-messages) for the streaming overload
+identifier. See [Downloading Messages](docs/guides/downloading-messages) for the streaming overload
 and large-message considerations.
 
 ## Next Steps
 
-- [Order Types](/docs/guides/order-types) — The full set of download and upload order types
-- [Downloading Messages](/docs/guides/downloading-messages) — Fragments, streaming and large messages
-- [Confirming Messages](/docs/guides/confirming-messages) — Telling the bank a message was received
-- [Submitting Orders](/docs/guides/submitting-orders) — Uploading pain.001/pain.008 orders
-- [Error Handling](/docs/guides/error-handling) — The exception hierarchy
+- [Order Types](docs/guides/order-types) — The full set of download and upload order types
+- [Downloading Messages](docs/guides/downloading-messages) — Fragments, streaming and large messages
+- [Confirming Messages](docs/guides/confirming-messages) — Telling the bank a message was received
+- [Submitting Orders](docs/guides/submitting-orders) — Uploading pain.001/pain.008 orders
+- [Error Handling](docs/guides/error-handling) — The exception hierarchy

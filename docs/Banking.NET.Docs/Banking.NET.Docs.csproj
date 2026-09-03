@@ -6,7 +6,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <IsPackable>false</IsPackable>
     <RootNamespace>Banking.NET.Docs</RootNamespace>
-    <GenerateDocumentationFile>false</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
@@ -22,10 +21,24 @@
 
   <PropertyGroup>
     <BaseUrl Condition="'$(BaseUrl)' == ''">https://emuuu.github.io/Banking.NET</BaseUrl>
+    <!-- The <base href> written into every generated page. Local dev/tests use "/"; the deploy workflow
+         sets "/Banking.NET/" to match the GitHub Pages project path. -->
+    <DocsBasePath Condition="'$(DocsBasePath)' == ''">/</DocsBasePath>
   </PropertyGroup>
 
-  <Target Name="GenerateDocsData" BeforeTargets="Build">
-    <Exec Command="dotnet run --project ../Banking.NET.Docs.Generator -- $(MSBuildProjectDirectory)/wwwroot --base-url $(BaseUrl)" />
+  <!--
+    Runs before static web assets are resolved, not just before Build: the wwwroot/** glob is evaluated
+    once at project-evaluation time, so files this target writes into wwwroot never become implicit
+    Content items no matter how early within the Build phase it runs. The explicit Content ItemGroup
+    below is what actually gets the generated files into the publish output.
+  -->
+  <Target Name="GenerateDocsData" BeforeTargets="BeforeBuild;ResolveStaticWebAssetsInputs;AssignTargetPaths">
+    <Exec Command="dotnet run --project ../Banking.NET.Docs.Generator -- $(MSBuildProjectDirectory)/wwwroot --base-url $(BaseUrl) --base-path $(DocsBasePath)" />
+    <ItemGroup>
+      <Content Include="wwwroot/data/**;wwwroot/docs/**;wwwroot/sitemap.xml;wwwroot/robots.txt"
+               Exclude="@(Content)"
+               CopyToPublishDirectory="PreserveNewest" />
+    </ItemGroup>
   </Target>
 
 </Project>

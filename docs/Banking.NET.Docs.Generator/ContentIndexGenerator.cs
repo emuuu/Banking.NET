@@ -7,6 +7,7 @@ using YamlDotNet.Serialization.NamingConventions;
 
 namespace Banking.NET.Docs.Generator;
 
+/// <summary>Converts the markdown files under <c>wwwroot/content</c> into a searchable, navigable content index.</summary>
 public partial class ContentIndexGenerator
 {
     private static readonly JsonSerializerOptions JsonOptions = new()
@@ -21,6 +22,10 @@ public partial class ContentIndexGenerator
         .UseAutoIdentifiers()
         .Build();
 
+    /// <summary>Reads every markdown file under <paramref name="contentDir"/>, renders it, and writes the resulting index as JSON to <paramref name="outputPath"/>.</summary>
+    /// <param name="contentDir">The directory to scan recursively for <c>*.md</c> files.</param>
+    /// <param name="outputPath">The file the generated JSON index is written to.</param>
+    /// <returns>The generated entries, for callers that also need them (e.g. to build the sitemap and static pages).</returns>
     public async Task<List<ContentIndexEntry>> GenerateAsync(string contentDir, string outputPath)
     {
         var entries = new List<ContentIndexEntry>();
@@ -163,24 +168,47 @@ public partial class ContentIndexGenerator
     private static partial Regex WhitespaceRegex();
 }
 
+/// <summary>The YAML front matter block at the top of a content markdown file.</summary>
 public class FrontMatter
 {
+    /// <summary>The page title; falls back to the file name when absent.</summary>
     public string? Title { get; set; }
+
+    /// <summary>The navigation category; falls back to the top-level content folder when absent.</summary>
     public string? Category { get; set; }
+
+    /// <summary>The sort order within the category.</summary>
     public int Order { get; set; }
+
+    /// <summary>The page description, used for meta tags and search results.</summary>
     public string? Description { get; set; }
 }
 
+/// <summary>One entry in the generated content index: metadata and rendered content for a single markdown page.</summary>
 public class ContentIndexEntry
 {
+    /// <summary>The page's URL slug, derived from its path under the content directory.</summary>
     public string Slug { get; set; } = "";
+
+    /// <summary>The page title.</summary>
     public string Title { get; set; } = "";
+
+    /// <summary>The navigation category.</summary>
     public string Category { get; set; } = "";
+
+    /// <summary>The sort order within the category.</summary>
     public int Order { get; set; }
+
+    /// <summary>The page description.</summary>
     public string Description { get; set; } = "";
+
+    /// <summary>The page's h2/h3 headings, in document order.</summary>
     public List<string> Headings { get; set; } = [];
+
+    /// <summary>The page body as plain text, used for full-text search.</summary>
     public string SearchText { get; set; } = "";
 
+    /// <summary>The rendered HTML body. Not part of the JSON content index; consumed directly by <see cref="StaticHtmlGenerator"/>.</summary>
     [JsonIgnore]
     public string HtmlContent { get; set; } = "";
 }

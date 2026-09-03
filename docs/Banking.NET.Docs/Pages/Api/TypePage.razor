@@ -1,4 +1,4 @@
-@page "/api/{Name}"
+@page "/api/{Slug}"
 @inject IRestApiDocService DocService
 
 <PageTitle>@(_type?.Name ?? _enum?.Name ?? "Not Found") - Banking.NET Docs</PageTitle>
@@ -7,7 +7,7 @@
 {
     <div class="text-center py-5">
         <h2>Not Found</h2>
-        <p class="text-muted">No public type or enum named <code>@Name</code> was found.</p>
+        <p class="text-muted">No public type or enum named <code>@Slug</code> was found.</p>
         <a href="api" class="btn btn-primary">Back to API Reference</a>
     </div>
 }
@@ -34,6 +34,34 @@ else if (_type is not null)
                 }
                 <ParamTable Parameters="ctor.Parameters" />
             }
+        }
+
+        @if (_type.Fields.Count > 0)
+        {
+            <h3 class="mt-4">Constants</h3>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col">Name</th>
+                            <th scope="col">Type</th>
+                            <th scope="col">Value</th>
+                            <th scope="col">Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var field in _type.Fields)
+                        {
+                            <tr>
+                                <th scope="row"><code>@field.Name</code></th>
+                                <td><code>@field.Type</code></td>
+                                <td><code>@field.Value</code></td>
+                                <td>@field.Description</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
         }
 
         @if (_type.Properties.Count > 0)
@@ -115,7 +143,7 @@ else if (_enum is not null)
 }
 
 @code {
-    [Parameter] public string Name { get; set; } = "";
+    [Parameter] public string Slug { get; set; } = "";
 
     private TypeDoc? _type;
     private EnumDoc? _enum;
@@ -123,8 +151,8 @@ else if (_enum is not null)
     protected override async Task OnParametersSetAsync()
     {
         await DocService.InitializeAsync();
-        _type = DocService.GetType(Name);
-        _enum = _type is null ? DocService.GetEnum(Name) : null;
+        _type = DocService.GetType(Slug);
+        _enum = _type is null ? DocService.GetEnum(Slug) : null;
     }
 
     private static string FormatSignature(string name, List<ParamDocEntry> parameters) =>

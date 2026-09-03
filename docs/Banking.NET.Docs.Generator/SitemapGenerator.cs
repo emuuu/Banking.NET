@@ -2,15 +2,21 @@ using System.Text;
 
 namespace Banking.NET.Docs.Generator;
 
+/// <summary>Writes <c>sitemap.xml</c> and <c>robots.txt</c> for the docs site, listing every content page and API reference page.</summary>
 public class SitemapGenerator
 {
     private readonly string _baseUrl;
 
+    /// <param name="baseUrl">The site's absolute base URL (e.g. <c>https://emuuu.github.io/Banking.NET</c>), used to build fully qualified <c>&lt;loc&gt;</c> entries.</param>
     public SitemapGenerator(string baseUrl)
     {
         _baseUrl = baseUrl.TrimEnd('/');
     }
 
+    /// <summary>Writes <c>sitemap.xml</c> and <c>robots.txt</c> into <paramref name="wwwrootPath"/>.</summary>
+    /// <param name="wwwrootPath">The Blazor app's wwwroot directory.</param>
+    /// <param name="entries">The generated content index entries, one URL per entry.</param>
+    /// <param name="apiSlugs">The slugs of every documented type and enum, one URL per slug.</param>
     public async Task GenerateAsync(string wwwrootPath, List<ContentIndexEntry> entries, IReadOnlyList<string> apiSlugs)
     {
         await GenerateSitemap(wwwrootPath, entries, apiSlugs).ConfigureAwait(false);

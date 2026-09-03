@@ -28,7 +28,7 @@ var result = await client.SubmitOrderAsync(OrderType.CCT, xml);
 ```
 
 Passing a download order type (e.g. `OrderType.C53`) throws `ArgumentException` — see
-[Order Types](/docs/guides/order-types) for the full list of upload types (`OrderType.UploadTypes`).
+[Order Types](docs/guides/order-types) for the full list of upload types (`OrderType.UploadTypes`).
 For the `Stream` overload, this validation happens *before* the stream is read.
 
 ## Compression
@@ -63,10 +63,10 @@ if (result.Location is { } location)
 ```
 
 A rejected submission (e.g. an invalid `OrderType` header, or content the gateway cannot parse)
-throws `CommerzbankBadRequestException` — see [Error Handling](/docs/guides/error-handling).
+throws `CommerzbankBadRequestException` — see [Error Handling](docs/guides/error-handling).
 
 ## Next Steps
 
-- [ISO 20022: Writing pain.001 / pain.008](/docs/guides/iso20022-writing-pain) — Building the content to submit
-- [Order Types](/docs/guides/order-types)
-- [Error Handling](/docs/guides/error-handling)
+- [ISO 20022: Writing pain.001 / pain.008](docs/guides/iso20022-writing-pain) — Building the content to submit
+- [Order Types](docs/guides/order-types)
+- [Error Handling](docs/guides/error-handling)

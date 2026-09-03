@@ -17,6 +17,7 @@ public sealed class CorporatePaymentsClientFactory : IDisposable
     private HttpClient? _tokenHttpClient;
     private HttpClient? _apiHttpClient;
 
+    /// <param name="credentials">The credential service the client is (re)built from whenever the entered credentials change.</param>
     public CorporatePaymentsClientFactory(DocsCredentialService credentials)
     {
         ArgumentNullException.ThrowIfNull(credentials);
@@ -67,6 +68,7 @@ public sealed class CorporatePaymentsClientFactory : IDisposable
         _tokenHttpClient = null;
     }
 
+    /// <summary>Disposes the current client, if any, and stops listening for credential changes.</summary>
     public void Dispose()
     {
         _credentials.CredentialsChanged -= OnCredentialsChanged;

@@ -30,7 +30,7 @@ var report = Pain002Reader.Read(message);
 
 ## Which Order Types Deliver pain.002
 
-Several download order types carry a pain.002 payload — see [Order Types](/docs/guides/order-types)
+Several download order types carry a pain.002 payload — see [Order Types](docs/guides/order-types)
 for the full table:
 
 | Order type | Reports on |
@@ -52,42 +52,49 @@ processed.
 ```csharp
 public sealed class PaymentStatusReport
 {
-    Iso20022MessageIdentifier Identifier;
-    string? MessageId;
-    DateTimeOffset? CreationDateTime;
-    PartyIdentification? InitiatingParty;
-    FinancialInstitution? DebtorAgent;
-    FinancialInstitution? CreditorAgent;
-    OriginalGroupStatus OriginalGroup;
-    List<OriginalPaymentInformationStatus> PaymentInformations;
-    XElement Source;
+    public required Iso20022MessageIdentifier Identifier { get; init; }
+    public string? MessageId { get; init; }
+    public DateTimeOffset? CreationDateTime { get; init; }
+    public PartyIdentification? InitiatingParty { get; init; }
+    public FinancialInstitution? DebtorAgent { get; init; }
+    public FinancialInstitution? CreditorAgent { get; init; }
+    public required OriginalGroupStatus OriginalGroup { get; init; }
+    public List<OriginalPaymentInformationStatus> PaymentInformations { get; init; } = [];
+    public required XElement Source { get; init; }
 }
 
 public sealed class OriginalGroupStatus
 {
-    string? OriginalMessageId;
-    string? OriginalMessageNameId;
-    string? GroupStatus;                 // e.g. ACTC, RJCT, ACSP — the group-level status
-    List<StatusReason> StatusReasons;
-    List<TransactionCountPerStatus> NumberOfTransactionsPerStatus;
+    public string? OriginalMessageId { get; init; }
+    public string? OriginalMessageNameId { get; init; }
+    public string? GroupStatus { get; init; }    // e.g. ACCP, RJCT — the group-level status
+    public List<StatusReason> StatusReasons { get; init; } = [];
+    public List<TransactionCountPerStatus> NumberOfTransactionsPerStatus { get; init; } = [];
+    public required XElement Source { get; init; }
 }
 
 public sealed class OriginalPaymentInformationStatus
 {
-    string? OriginalPaymentInformationId;
-    string? PaymentInformationStatus;    // the per-PaymentInformation status
-    List<TransactionStatus> Transactions;
+    public string? OriginalPaymentInformationId { get; init; }
+    public string? PaymentInformationStatus { get; init; }    // the per-PaymentInformation status
+    public List<TransactionStatus> Transactions { get; init; } = [];
+    public required XElement Source { get; init; }
 }
 
 public sealed class TransactionStatus
 {
-    string? OriginalInstructionId;
-    string? OriginalEndToEndId;
-    string? Status;                      // TransactionStatus, per individual transaction
-    List<StatusReason> StatusReasons;
-    OriginalTransactionReference? OriginalTransaction;
+    public string? OriginalInstructionId { get; init; }
+    public string? OriginalEndToEndId { get; init; }
+    public string? Status { get; init; }    // e.g. ACSC, RJCT — per individual transaction
+    public List<StatusReason> StatusReasons { get; init; } = [];
+    public OriginalTransactionReference? OriginalTransaction { get; init; }
+    public required XElement Source { get; init; }
 }
 ```
+
+Every reader-specific model above also carries a required `Source` property, the `XElement` it was
+read from; shared types it references (`PartyIdentification`, `FinancialInstitution`, `StatusReason`)
+are not all read-only, so this does not extend to every referenced type.
 
 The report is layered exactly like the original order was: an overall `OriginalGroup` status, a
 `PaymentInformationStatus` per `PmtInf` batch, and a `Status` per individual transaction inside
@@ -117,6 +124,6 @@ element behind a non-nullable property throws `Iso20022ValidationException` with
 
 ## Next Steps
 
-- [ISO 20022: Reading camt Messages](/docs/guides/iso20022-reading-camt)
-- [ISO 20022: Writing pain.001 / pain.008](/docs/guides/iso20022-writing-pain)
-- [Submitting Orders](/docs/guides/submitting-orders)
+- [ISO 20022: Reading camt Messages](docs/guides/iso20022-reading-camt)
+- [ISO 20022: Writing pain.001 / pain.008](docs/guides/iso20022-writing-pain)
+- [Submitting Orders](docs/guides/submitting-orders)

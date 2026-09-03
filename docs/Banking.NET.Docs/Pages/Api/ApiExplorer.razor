@@ -19,7 +19,7 @@
             @foreach (var type in types)
             {
                 <div class="col">
-                    <a href="@($"api/{type.Name}")" class="text-decoration-none">
+                    <a href="@($"api/{type.Slug}")" class="text-decoration-none">
                         <div class="card h-100 service-card">
                             <div class="card-body">
                                 <h5 class="card-title">@type.Name</h5>
@@ -33,7 +33,7 @@
             @foreach (var enumDoc in enums)
             {
                 <div class="col">
-                    <a href="@($"api/{enumDoc.Name}")" class="text-decoration-none">
+                    <a href="@($"api/{enumDoc.Slug}")" class="text-decoration-none">
                         <div class="card h-100 service-card">
                             <div class="card-body">
                                 <h5 class="card-title">@enumDoc.Name</h5>

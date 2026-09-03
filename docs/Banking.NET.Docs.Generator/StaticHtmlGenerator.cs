@@ -1,17 +1,29 @@
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Web;
 
 namespace Banking.NET.Docs.Generator;
 
-public class StaticHtmlGenerator
+/// <summary>
+/// Pre-renders a static <c>index.html</c> per content page (for SEO and direct/crawler navigation) and the
+/// site's <c>404.html</c> SPA fallback, both carrying the deployment's base path and shared meta tags.
+/// </summary>
+public partial class StaticHtmlGenerator
 {
     private readonly string _baseUrl;
+    private readonly string _basePath;
 
-    public StaticHtmlGenerator(string baseUrl)
+    /// <param name="baseUrl">The site's absolute base URL, used for canonical links and JSON-LD.</param>
+    /// <param name="basePath">The <c>&lt;base href&gt;</c> to write into every generated page (e.g. <c>/</c> locally, <c>/Banking.NET/</c> on GitHub Pages).</param>
+    public StaticHtmlGenerator(string baseUrl, string basePath)
     {
         _baseUrl = baseUrl.TrimEnd('/');
+        _basePath = basePath;
     }
 
+    /// <summary>Generates one static page per content entry under <c>docs/{slug}/index.html</c>, then <c>404.html</c> and the root page patches.</summary>
+    /// <param name="wwwrootPath">The Blazor app's wwwroot directory.</param>
+    /// <param name="entries">The generated content index entries to render pages for.</param>
     public async Task GenerateAsync(string wwwrootPath, List<ContentIndexEntry> entries)
     {
         var count = 0;
@@ -28,7 +40,7 @@ public class StaticHtmlGenerator
         Console.WriteLine($"  Generated {count} static doc pages");
 
         await Generate404(wwwrootPath).ConfigureAwait(false);
-        await InjectMetaTags(wwwrootPath).ConfigureAwait(false);
+        await PatchRootPages(wwwrootPath).ConfigureAwait(false);
     }
 
     private string BuildDocPage(ContentIndexEntry entry)
@@ -45,7 +57,7 @@ public class StaticHtmlGenerator
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                 <title>{title} - Banking.NET Docs</title>
-                <base href="/" />
+                <base href="{_basePath}" />
                 <meta name="description" content="{description}" />
                 <link rel="canonical" href="{url}" />
                 <meta property="og:type" content="article" />
@@ -128,22 +140,23 @@ public class StaticHtmlGenerator
 
     private async Task Generate404(string wwwrootPath)
     {
-        var html = """
+        var html = $$"""
             <!DOCTYPE html>
             <html lang="en">
             <head>
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
                 <title>Page Not Found - Banking.NET Docs</title>
-                <base href="/" />
+                <base href="{{_basePath}}" />
                 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
                       integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous" />
                 <link href="css/app.css" rel="stylesheet" />
                 <script>
-                    // GitHub Pages SPA redirect
+                    // GitHub Pages SPA fallback: stash the requested path so index.html can restore it
+                    // via history.replaceState once the Blazor router is ready (see wwwroot/index.html).
                     sessionStorage.redirect = location.href;
                 </script>
-                <meta http-equiv="refresh" content="0;URL='/'">
+                <meta http-equiv="refresh" content="0;URL='{{_basePath}}'">
             </head>
             <body>
                 <div id="app"></div>
@@ -155,7 +168,12 @@ public class StaticHtmlGenerator
         Console.WriteLine("  Generated 404.html");
     }
 
-    private async Task InjectMetaTags(string wwwrootPath)
+    /// <summary>
+    /// Normalizes the checked-in <c>index.html</c>/<c>404.html</c> shells to the current base path and,
+    /// the first time, injects the shared Open Graph/Twitter meta tags. Both files are otherwise
+    /// source-controlled, so this only rewrites what generation is actually responsible for.
+    /// </summary>
+    private async Task PatchRootPages(string wwwrootPath)
     {
         const string metaTags = """
 
@@ -175,14 +193,22 @@ public class StaticHtmlGenerator
             if (!File.Exists(filePath)) continue;
 
             var content = await File.ReadAllTextAsync(filePath).ConfigureAwait(false);
+            var original = content;
 
-            if (content.Contains("og:title", StringComparison.Ordinal)) continue;
+            content = BaseHrefRegex().Replace(content, $"""<base href="{_basePath}" />""");
 
-            const string marker = """<meta name="viewport" content="width=device-width, initial-scale=1.0" />""";
-            content = content.Replace(marker, marker + metaTags);
+            if (!content.Contains("og:title", StringComparison.Ordinal))
+            {
+                const string marker = """<meta name="viewport" content="width=device-width, initial-scale=1.0" />""";
+                content = content.Replace(marker, marker + metaTags);
+                Console.WriteLine($"  Injected meta tags into {fileName}");
+            }
 
-            await File.WriteAllTextAsync(filePath, content).ConfigureAwait(false);
-            Console.WriteLine($"  Injected meta tags into {fileName}");
+            if (content != original)
+                await File.WriteAllTextAsync(filePath, content).ConfigureAwait(false);
         }
     }
+
+    [GeneratedRegex("""<base href="[^"]*" />""")]
+    private static partial Regex BaseHrefRegex();
 }

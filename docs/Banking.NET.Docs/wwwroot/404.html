@@ -17,7 +17,8 @@
           integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous" />
     <link href="css/app.css" rel="stylesheet" />
     <script>
-        // GitHub Pages SPA redirect
+        // GitHub Pages SPA fallback: stash the requested path so index.html can restore it
+        // via history.replaceState once the Blazor router is ready (see wwwroot/index.html).
         sessionStorage.redirect = location.href;
     </script>
     <meta http-equiv="refresh" content="0;URL='/'">

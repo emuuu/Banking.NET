@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
@@ -30,6 +31,9 @@ public class RestApiDocGenerator
     private Dictionary<string, string> _xmlDocs = new();
     private readonly NullabilityInfoContext _nullabilityCtx = new();
 
+    /// <summary>Reflects over the Banking.NET assembly, resolves XML documentation for every public member, and writes the result as JSON to <paramref name="outputPath"/>.</summary>
+    /// <param name="outputPath">The file the generated JSON is written to.</param>
+    /// <returns>The generated documentation root, for callers that also need the type/enum list (e.g. to build the sitemap).</returns>
     public async Task<RestApiDocsRoot> GenerateAsync(string outputPath)
     {
         var assembly = typeof(CommerzbankOptions).Assembly;
@@ -56,6 +60,8 @@ public class RestApiDocGenerator
             .ThenBy(t => t.Name, StringComparer.Ordinal)
             .ToList();
 
+        AssignSlugs(types, enums);
+
         var root = new RestApiDocsRoot { Types = types, Enums = enums };
 
         var json = JsonSerializer.Serialize(root, JsonOptions);
@@ -68,6 +74,39 @@ public class RestApiDocGenerator
     {
         public static readonly string[] Values = ["Configuration", "Authentication", "Exceptions", "Corporate Payments", "ISO 20022"];
     }
+
+    // ── Slugs ──
+
+    /// <summary>
+    /// Assigns each type/enum a URL slug. Names are unique today, but two types with the same simple
+    /// name (e.g. a future nested or generic type) would otherwise collide under <c>api/{slug}</c>:
+    /// disambiguate first by the last namespace segment, then, if that still collides, by the full
+    /// namespace.
+    /// </summary>
+    private static void AssignSlugs(List<TypeDoc> types, List<EnumDoc> enums)
+    {
+        var nameCounts = types.Select(t => t.Name)
+            .Concat(enums.Select(e => e.Name))
+            .GroupBy(n => n, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var t in types)
+            t.Slug = nameCounts[t.Name] > 1 ? $"{t.Name}-{LastNamespaceSegment(t.Namespace)}" : t.Name;
+        foreach (var e in enums)
+            e.Slug = nameCounts[e.Name] > 1 ? $"{e.Name}-{LastNamespaceSegment(e.Namespace)}" : e.Name;
+
+        var slugCounts = types.Select(t => t.Slug)
+            .Concat(enums.Select(e => e.Slug))
+            .GroupBy(s => s, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var t in types)
+            if (slugCounts[t.Slug] > 1) t.Slug = $"{t.Namespace.Replace('.', '-')}-{t.Name}";
+        foreach (var e in enums)
+            if (slugCounts[e.Slug] > 1) e.Slug = $"{e.Namespace.Replace('.', '-')}-{e.Name}";
+    }
+
+    private static string LastNamespaceSegment(string ns) => ns.Length == 0 ? "" : ns.Split('.')[^1];
 
     // ── Type building ──
 
@@ -85,8 +124,8 @@ public class RestApiDocGenerator
             Constructors = type.GetConstructors(BindingFlags.Public | BindingFlags.Instance)
                 .Select(BuildConstructorDoc)
                 .ToList(),
+            Fields = BuildFieldDocs(type),
             Properties = type.GetProperties(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly)
-                .Where(p => p.GetIndexParameters().Length == 0)
                 .Select(BuildPropertyDoc)
                 .ToList(),
             Methods = type.GetMethods(BindingFlags.Public | BindingFlags.Static | BindingFlags.Instance | BindingFlags.DeclaredOnly)
@@ -116,7 +155,9 @@ public class RestApiDocGenerator
 
     private static bool IsDocumentableMethod(MethodInfo method, string kind)
     {
-        if (method.IsSpecialName) return false;
+        // Operators (op_Equality, ...) are IsSpecialName too, but are real, documentable API surface -
+        // unlike property/event accessors and other compiler-owned special names, which are excluded.
+        if (method.IsSpecialName && !method.Name.StartsWith("op_", StringComparison.Ordinal)) return false;
         if (method.Name.Contains('<', StringComparison.Ordinal)) return false;
         if (method.Name is "PrintMembers") return false;
 
@@ -126,25 +167,76 @@ public class RestApiDocGenerator
         return true;
     }
 
-    private ConstructorDoc BuildConstructorDoc(ConstructorInfo ctor) => new()
+    private ConstructorDoc BuildConstructorDoc(ConstructorInfo ctor)
     {
-        Description = GetXmlMemberSummary(ctor.DeclaringType!, "#ctor", "M"),
-        Parameters = ctor.GetParameters().Select(p => BuildParamDoc(p, ctor.DeclaringType!, "#ctor")).ToList()
+        var memberId = BuildMemberId(ctor);
+        return new ConstructorDoc
+        {
+            Description = _xmlDocs.GetValueOrDefault(memberId, ""),
+            Parameters = ctor.GetParameters().Select(p => BuildParamDoc(p, memberId)).ToList()
+        };
+    }
+
+    private MethodDoc BuildMethodDoc(MethodInfo method)
+    {
+        var memberId = ResolveMemberId(method);
+        return new MethodDoc
+        {
+            Name = FormatMethodName(method),
+            Description = _xmlDocs.GetValueOrDefault(memberId, ""),
+            ReturnType = FormatTypeName(method.ReturnType),
+            IsStatic = method.IsStatic,
+            Parameters = method.GetParameters().Select(p => BuildParamDoc(p, memberId)).ToList()
+        };
+    }
+
+    private static string FormatMethodName(MethodInfo method)
+    {
+        if (!method.IsSpecialName) return method.Name;
+        return method.Name switch
+        {
+            "op_Equality" => "operator ==",
+            "op_Inequality" => "operator !=",
+            "op_LessThan" => "operator <",
+            "op_GreaterThan" => "operator >",
+            "op_LessThanOrEqual" => "operator <=",
+            "op_GreaterThanOrEqual" => "operator >=",
+            "op_Addition" => "operator +",
+            "op_Subtraction" => "operator -",
+            "op_Multiply" => "operator *",
+            "op_Division" => "operator /",
+            "op_UnaryNegation" => "operator -(unary)",
+            "op_UnaryPlus" => "operator +(unary)",
+            "op_Implicit" => "implicit operator",
+            "op_Explicit" => "explicit operator",
+            _ => method.Name
+        };
+    }
+
+    private List<FieldDoc> BuildFieldDocs(Type type)
+    {
+        var typeName = GetXmlTypeName(type);
+        return type.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly)
+            .Where(f => f.IsLiteral && !f.IsSpecialName)
+            .Select(f => new FieldDoc
+            {
+                Name = f.Name,
+                Type = FormatTypeName(f.FieldType),
+                Value = FormatConstValue(f.GetRawConstantValue()),
+                Description = _xmlDocs.GetValueOrDefault($"F:{typeName}.{f.Name}", "")
+            })
+            .ToList();
+    }
+
+    private static string FormatConstValue(object? value) => value switch
+    {
+        null => "null",
+        string s => $"\"{s}\"",
+        bool b => b ? "true" : "false",
+        _ => Convert.ToString(value, CultureInfo.InvariantCulture) ?? ""
     };
 
-    private MethodDoc BuildMethodDoc(MethodInfo method) => new()
-    {
-        Name = method.Name,
-        Description = GetXmlMemberSummary(method.DeclaringType!, method.Name, "M"),
-        ReturnType = FormatReturnType(method.ReturnType),
-        IsStatic = method.IsStatic,
-        Parameters = method.GetParameters()
-            .Where(p => p.ParameterType != typeof(CancellationToken))
-            .Select(p => BuildParamDoc(p, method.DeclaringType!, method.Name))
-            .ToList()
-    };
-
-    private ParamDocEntry BuildParamDoc(ParameterInfo param, Type declaringType, string methodName)
+    private ParamDocEntry BuildParamDoc(ParameterInfo param, string memberId)
     {
         var parameterType = param.ParameterType;
         var refModifier = "";
@@ -161,19 +253,27 @@ public class RestApiDocGenerator
             Name = param.Name ?? "",
             Type = refModifier + typeName + (isNullable && !typeName.EndsWith('?') ? "?" : ""),
             Required = !param.HasDefaultValue && !isNullable,
-            Description = GetXmlParamSummary(declaringType, methodName, param.Name ?? ""),
-            Default = param.HasDefaultValue ? FormatDefaultValue(param.DefaultValue) : null
+            Description = _xmlDocs.GetValueOrDefault($"{memberId}|param:{param.Name}", ""),
+            Default = param.HasDefaultValue ? FormatDefaultValue(param.DefaultValue, parameterType) : null
         };
     }
 
-    private PropertyDoc BuildPropertyDoc(PropertyInfo prop) => new()
+    private PropertyDoc BuildPropertyDoc(PropertyInfo prop)
     {
-        Name = prop.Name,
-        Type = FormatPropertyTypeName(prop),
-        Description = GetXmlMemberSummary(prop.DeclaringType!, prop.Name, "P"),
-        Accessors = DescribeAccessors(prop),
-        Required = IsRequiredMember(prop)
-    };
+        var indexParams = prop.GetIndexParameters();
+        var name = indexParams.Length == 0
+            ? prop.Name
+            : $"this[{string.Join(", ", indexParams.Select(p => $"{FormatTypeName(p.ParameterType)} {p.Name}"))}]";
+
+        return new PropertyDoc
+        {
+            Name = name,
+            Type = FormatPropertyTypeName(prop),
+            Description = _xmlDocs.GetValueOrDefault(ResolvePropertyMemberId(prop), ""),
+            Accessors = DescribeAccessors(prop),
+            Required = IsRequiredMember(prop)
+        };
+    }
 
     private static string DescribeAccessors(PropertyInfo prop)
     {
@@ -193,6 +293,7 @@ public class RestApiDocGenerator
 
     private EnumDoc BuildEnumDoc(Type enumType)
     {
+        var typeName = GetXmlTypeName(enumType);
         var values = new List<EnumValueDoc>();
         foreach (var name in Enum.GetNames(enumType))
         {
@@ -202,7 +303,8 @@ public class RestApiDocGenerator
             values.Add(new EnumValueDoc
             {
                 Name = name,
-                SerializedValue = enumMember?.Value ?? rawValue.ToString()
+                SerializedValue = enumMember?.Value ?? rawValue.ToString(CultureInfo.InvariantCulture),
+                Description = _xmlDocs.GetValueOrDefault($"F:{typeName}.{name}", "")
             });
         }
 
@@ -217,46 +319,138 @@ public class RestApiDocGenerator
         };
     }
 
-    // ── XML doc helpers ──
+    // ── XML doc lookup ──
 
-    private string GetXmlSummary(Type type)
+    private string GetXmlSummary(Type type) =>
+        _xmlDocs.GetValueOrDefault($"T:{GetXmlTypeName(type)}", "");
+
+    /// <summary>
+    /// Resolves the XML doc member ID that actually carries a <c>&lt;summary&gt;</c> for <paramref name="method"/>:
+    /// its own ID, or - for an <c>&lt;inheritdoc/&gt;</c> implementation, which the compiler emits without
+    /// resolving - the interface member it implements, falling back to the base method it overrides.
+    /// </summary>
+    private string ResolveMemberId(MethodInfo method)
     {
-        var key = $"T:{type.FullName}";
-        return _xmlDocs.GetValueOrDefault(key, "");
-    }
+        var ownId = BuildMemberId(method);
+        if (_xmlDocs.ContainsKey(ownId)) return ownId;
 
-    private string GetXmlMemberSummary(Type type, string memberName, string prefix)
-    {
-        var key = $"{prefix}:{type.FullName}.{memberName}";
-        if (_xmlDocs.TryGetValue(key, out var doc))
-            return doc;
-
-        // Methods/constructors carry a parenthesized parameter list in their XML doc key; matching on
-        // "key(" avoids false positives between methods whose names share a prefix (e.g. Read vs ReadAsync).
-        var keyWithParen = key + "(";
-        foreach (var kvp in _xmlDocs)
+        var ifaceMethod = FindInterfaceMethod(method);
+        if (ifaceMethod is not null)
         {
-            if (kvp.Key.StartsWith(keyWithParen, StringComparison.Ordinal))
-                return kvp.Value;
+            var ifaceId = BuildMemberId(ifaceMethod);
+            if (_xmlDocs.ContainsKey(ifaceId)) return ifaceId;
         }
 
-        return "";
-    }
-
-    private string GetXmlParamSummary(Type type, string methodName, string paramName)
-    {
-        var methodPrefix = $"M:{type.FullName}.{methodName}(";
-        var paramMarker = $"|param:{paramName}";
-        foreach (var kvp in _xmlDocs)
+        var baseDefinition = method.GetBaseDefinition();
+        if (baseDefinition.DeclaringType != method.DeclaringType)
         {
-            if (kvp.Key.StartsWith(methodPrefix, StringComparison.Ordinal) && kvp.Key.EndsWith(paramMarker, StringComparison.Ordinal))
-                return kvp.Value;
+            var baseId = BuildMemberId(baseDefinition);
+            if (_xmlDocs.ContainsKey(baseId)) return baseId;
         }
 
-        return "";
+        return ownId;
+    }
+
+    private string ResolvePropertyMemberId(PropertyInfo prop)
+    {
+        var ownId = BuildMemberId(prop);
+        if (_xmlDocs.ContainsKey(ownId)) return ownId;
+
+        var accessor = prop.GetMethod ?? prop.SetMethod;
+        var ifaceMethod = accessor is null ? null : FindInterfaceMethod(accessor);
+        var ifaceProp = ifaceMethod?.DeclaringType?.GetProperties()
+            .FirstOrDefault(p => p.GetMethod == ifaceMethod || p.SetMethod == ifaceMethod);
+        if (ifaceProp is not null)
+        {
+            var ifaceId = BuildMemberId(ifaceProp);
+            if (_xmlDocs.ContainsKey(ifaceId)) return ifaceId;
+        }
+
+        return ownId;
+    }
+
+    /// <summary>Finds the interface method that <paramref name="impl"/> implements, via the declaring type's interface map.</summary>
+    private static MethodInfo? FindInterfaceMethod(MethodInfo impl)
+    {
+        var type = impl.DeclaringType;
+        if (type is null || type.IsInterface) return null;
+
+        foreach (var iface in type.GetInterfaces())
+        {
+            var map = type.GetInterfaceMap(iface);
+            var index = Array.IndexOf(map.TargetMethods, impl);
+            if (index >= 0) return map.InterfaceMethods[index];
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Builds the exact ECMA-334 XML doc member ID (<c>M:</c>) for a method or constructor, so overloads
+    /// resolve to their own <c>&lt;summary&gt;</c> instead of the first one found by name.
+    /// </summary>
+    private static string BuildMemberId(MethodBase method)
+    {
+        var typeName = GetXmlTypeName(method.DeclaringType!);
+        var memberName = method is ConstructorInfo ? "#ctor" : method.Name;
+
+        if (method is MethodInfo { IsGenericMethodDefinition: true } generic)
+            memberName += $"``{generic.GetGenericArguments().Length}";
+
+        var parameters = method.GetParameters();
+        if (parameters.Length == 0)
+            return $"M:{typeName}.{memberName}";
+
+        var paramList = string.Join(",", parameters.Select(p => GetXmlTypeName(p.ParameterType)));
+        return $"M:{typeName}.{memberName}({paramList})";
+    }
+
+    /// <summary>Builds the exact ECMA-334 XML doc member ID (<c>P:</c>) for a property, including an indexer's parameter list.</summary>
+    private static string BuildMemberId(PropertyInfo prop)
+    {
+        var typeName = GetXmlTypeName(prop.DeclaringType!);
+        var indexParams = prop.GetIndexParameters();
+        if (indexParams.Length == 0)
+            return $"P:{typeName}.{prop.Name}";
+
+        var paramList = string.Join(",", indexParams.Select(p => GetXmlTypeName(p.ParameterType)));
+        return $"P:{typeName}.{prop.Name}({paramList})";
     }
 
     // ── Type formatting ──
+
+    /// <summary>
+    /// Formats a type the way the C# compiler encodes it in XML doc member IDs: fully qualified,
+    /// nested types joined with '.', closed generic arguments in <c>{...}</c> (not <c>&lt;...&gt;</c>),
+    /// arrays as <c>T[]</c>/<c>T[,]</c>, by-ref parameters suffixed with '@', and type parameters as
+    /// <c>`N</c> (type-level) or <c>``N</c> (method-level).
+    /// </summary>
+    private static string GetXmlTypeName(Type type)
+    {
+        if (type.IsGenericParameter)
+            return type.DeclaringMethod is not null ? $"``{type.GenericParameterPosition}" : $"`{type.GenericParameterPosition}";
+
+        if (type.IsByRef)
+            return GetXmlTypeName(type.GetElementType()!) + "@";
+
+        if (type.IsArray)
+        {
+            var rank = type.GetArrayRank();
+            var suffix = rank == 1 ? "[]" : $"[{new string(',', rank - 1)}]";
+            return GetXmlTypeName(type.GetElementType()!) + suffix;
+        }
+
+        if (type.IsGenericType && !type.IsGenericTypeDefinition)
+        {
+            var definitionName = GetXmlTypeName(type.GetGenericTypeDefinition());
+            var tickIndex = definitionName.IndexOf('`');
+            var baseName = tickIndex >= 0 ? definitionName[..tickIndex] : definitionName;
+            var args = string.Join(",", type.GetGenericArguments().Select(GetXmlTypeName));
+            return $"{baseName}{{{args}}}";
+        }
+
+        return (type.FullName ?? type.Name).Replace('+', '.');
+    }
 
     private static string FormatTypeName(Type type)
     {
@@ -302,24 +496,22 @@ public class RestApiDocGenerator
         return typeName;
     }
 
-    private static string FormatReturnType(Type type)
+    private static string? FormatDefaultValue(object? value, Type parameterType)
     {
-        var inner = UnwrapAsyncType(type);
-        if (inner is null) return FormatTypeName(type);
-        if (inner == typeof(void)) return type == typeof(Task) ? "Task" : "ValueTask";
-        return FormatTypeName(inner);
-    }
+        // A non-nullable value type (e.g. CancellationToken cancellationToken = default) has no metadata
+        // constant to carry "default", so reflection reports DefaultValue as null even though the
+        // parameter can never actually be null; show the C# spelling instead of a misleading "null".
+        if (value is null && parameterType.IsValueType && Nullable.GetUnderlyingType(parameterType) is null)
+            return "default";
 
-    private static string? FormatDefaultValue(object? value)
-    {
         return value switch
         {
             null => "null",
             string s => $"\"{s}\"",
             bool b => b ? "true" : "false",
-            int i => i.ToString(),
-            double d => d.ToString("G"),
             Enum e => e.ToString(),
+            int i => i.ToString(CultureInfo.InvariantCulture),
+            double d => d.ToString("G", CultureInfo.InvariantCulture),
             _ => value.ToString()
         };
     }
@@ -347,6 +539,11 @@ public class RestApiDocGenerator
         if (Nullable.GetUnderlyingType(param.ParameterType) is not null)
             return true;
 
+        // A non-nullable value type can never be null; reflection reporting DefaultValue as null for a
+        // "= default" struct parameter (see FormatDefaultValue) isn't nullability.
+        if (param.ParameterType.IsValueType)
+            return false;
+
         if (param.HasDefaultValue && param.DefaultValue is null)
             return true;
 
@@ -361,23 +558,6 @@ public class RestApiDocGenerator
         }
     }
 
-    // ── Async return type helpers ──
-
-    private static Type? UnwrapAsyncType(Type type)
-    {
-        if (type == typeof(Task) || type == typeof(ValueTask))
-            return typeof(void);
-
-        if (type.IsGenericType)
-        {
-            var genDef = type.GetGenericTypeDefinition();
-            if (genDef == typeof(Task<>) || genDef == typeof(ValueTask<>))
-                return type.GetGenericArguments()[0];
-        }
-
-        return null;
-    }
-
     // ── XML doc loading ──
 
     private static string? FindXmlDocPath(Assembly assembly)
@@ -389,8 +569,8 @@ public class RestApiDocGenerator
     }
 
     /// <summary>
-    /// Loads XML doc summaries. Parameter descriptions are stored under a synthetic key
-    /// <c>M:Type.Method|param:name</c> so <see cref="GetXmlParamSummary"/> can look them up without a second dictionary.
+    /// Loads XML doc summaries, keyed by the exact ECMA-334 member ID. Parameter descriptions are stored
+    /// under a synthetic key <c>{memberId}|param:name</c> so they share this dictionary without a second one.
     /// </summary>
     private static Dictionary<string, string> LoadXmlDocs(string xmlPath)
     {
@@ -432,69 +612,167 @@ public class RestApiDocGenerator
 
 // ── Output models ──
 
+/// <summary>The complete generated API reference: every documented public type and enum.</summary>
 public class RestApiDocsRoot
 {
+    /// <summary>The documented classes, interfaces, structs and records.</summary>
     public List<TypeDoc> Types { get; set; } = [];
+
+    /// <summary>The documented enums.</summary>
     public List<EnumDoc> Enums { get; set; } = [];
 }
 
+/// <summary>API reference data for a single class, interface, struct or record.</summary>
 public class TypeDoc
 {
+    /// <summary>The simple type name.</summary>
     public string Name { get; set; } = "";
+
+    /// <summary>The URL-safe identifier this type is reachable at under <c>api/{slug}</c>; equal to <see cref="Name"/> unless another type shares it.</summary>
+    public string Slug { get; set; } = "";
+
+    /// <summary>The fully qualified namespace.</summary>
     public string Namespace { get; set; } = "";
+
+    /// <summary>The API reference group this type is listed under (e.g. "ISO 20022").</summary>
     public string Group { get; set; } = "";
+
+    /// <summary>The C# kind of the type (Class, Interface, Struct, Record, Record struct, or Static class).</summary>
     public string Kind { get; set; } = "";
+
+    /// <summary>The type's XML doc summary.</summary>
     public string Description { get; set; } = "";
+
+    /// <summary>The public instance constructors.</summary>
     public List<ConstructorDoc> Constructors { get; set; } = [];
+
+    /// <summary>The public const fields.</summary>
+    public List<FieldDoc> Fields { get; set; } = [];
+
+    /// <summary>The public instance and static properties, including indexers.</summary>
     public List<PropertyDoc> Properties { get; set; } = [];
+
+    /// <summary>The public instance and static methods, including operators.</summary>
     public List<MethodDoc> Methods { get; set; } = [];
 }
 
+/// <summary>API reference data for a public constructor.</summary>
 public class ConstructorDoc
 {
+    /// <summary>The constructor's XML doc summary.</summary>
     public string Description { get; set; } = "";
+
+    /// <summary>The constructor parameters.</summary>
     public List<ParamDocEntry> Parameters { get; set; } = [];
 }
 
+/// <summary>API reference data for a public method or operator.</summary>
 public class MethodDoc
 {
+    /// <summary>The method name, or a symbolic name (e.g. "operator ==") for operator overloads.</summary>
     public string Name { get; set; } = "";
+
+    /// <summary>The method's XML doc summary, resolved through <c>&lt;inheritdoc/&gt;</c> when needed.</summary>
     public string Description { get; set; } = "";
+
+    /// <summary>The formatted return type, e.g. <c>Task&lt;OrderSubmissionResult&gt;</c>.</summary>
     public string ReturnType { get; set; } = "";
+
+    /// <summary>Whether the method is static.</summary>
     public bool IsStatic { get; set; }
+
+    /// <summary>The method parameters, including <c>CancellationToken</c> parameters.</summary>
     public List<ParamDocEntry> Parameters { get; set; } = [];
 }
 
+/// <summary>API reference data for a public property or indexer.</summary>
 public class PropertyDoc
 {
+    /// <summary>The property name, or <c>this[...]</c> with its parameter list for an indexer.</summary>
     public string Name { get; set; } = "";
+
+    /// <summary>The formatted property type.</summary>
     public string Type { get; set; } = "";
+
+    /// <summary>The property's XML doc summary, resolved through <c>&lt;inheritdoc/&gt;</c> when needed.</summary>
     public string Description { get; set; } = "";
+
+    /// <summary>The available accessors, e.g. "get, init".</summary>
     public string Accessors { get; set; } = "";
+
+    /// <summary>Whether the property is a C# <c>required</c> member.</summary>
     public bool Required { get; set; }
 }
 
+/// <summary>API reference data for a public const field.</summary>
+public class FieldDoc
+{
+    /// <summary>The field name.</summary>
+    public string Name { get; set; } = "";
+
+    /// <summary>The formatted field type.</summary>
+    public string Type { get; set; } = "";
+
+    /// <summary>The constant's literal value, formatted like a C# expression.</summary>
+    public string Value { get; set; } = "";
+
+    /// <summary>The field's XML doc summary.</summary>
+    public string Description { get; set; } = "";
+}
+
+/// <summary>API reference data for one constructor, method or indexer parameter.</summary>
 public class ParamDocEntry
 {
+    /// <summary>The parameter name.</summary>
     public string Name { get; set; } = "";
+
+    /// <summary>The formatted parameter type, including a <c>ref</c>/<c>out</c> modifier and nullable suffix where applicable.</summary>
     public string Type { get; set; } = "";
+
+    /// <summary>Whether the parameter has no default value and is not nullable.</summary>
     public bool Required { get; set; }
+
+    /// <summary>The parameter's XML doc <c>&lt;param&gt;</c> text.</summary>
     public string Description { get; set; } = "";
+
+    /// <summary>The formatted default value expression (e.g. <c>"false"</c>, <c>"null"</c>, <c>"default"</c>), or null if the parameter has none.</summary>
     public string? Default { get; set; }
 }
 
+/// <summary>API reference data for a public enum.</summary>
 public class EnumDoc
 {
+    /// <summary>The simple enum name.</summary>
     public string Name { get; set; } = "";
+
+    /// <summary>The URL-safe identifier this enum is reachable at under <c>api/{slug}</c>; equal to <see cref="Name"/> unless another type shares it.</summary>
+    public string Slug { get; set; } = "";
+
+    /// <summary>The fully qualified namespace.</summary>
     public string Namespace { get; set; } = "";
+
+    /// <summary>The API reference group this enum is listed under.</summary>
     public string Group { get; set; } = "";
+
+    /// <summary>The enum's XML doc summary.</summary>
     public string Description { get; set; } = "";
+
+    /// <summary>Whether the enum is decorated with <see cref="FlagsAttribute"/>.</summary>
     public bool IsFlags { get; set; }
+
+    /// <summary>The enum members.</summary>
     public List<EnumValueDoc> Values { get; set; } = [];
 }
 
+/// <summary>API reference data for a single enum member.</summary>
 public class EnumValueDoc
 {
+    /// <summary>The member name.</summary>
     public string Name { get; set; } = "";
+
+    /// <summary>The wire value used when the member is JSON-serialized (its <see cref="EnumMemberAttribute"/> value, or the numeric value if none is set).</summary>
     public string SerializedValue { get; set; } = "";
+
+    /// <summary>The member's XML doc summary.</summary>
+    public string Description { get; set; } = "";
 }
