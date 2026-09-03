@@ -468,12 +468,55 @@ public class PainValidatorTests
     [Theory]
     [InlineData("COBADEFF")]
     [InlineData("COBADEFFXXX")]
-    public void ValidateCreditTransfer_BicWithValidLength_DoesNotThrow(string bic)
+    [InlineData("MARKDEF1100")]
+    public void ValidateCreditTransfer_ValidBicsAtLegacyVersion_DoesNotThrow(string bic)
     {
         var initiation = ValidCreditTransfer();
         initiation.PaymentInformations[0].DebtorAgent = new FinancialInstitution { Bic = bic };
 
         Should.NotThrow(() => ValidateCreditTransfer(initiation));
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_BicOnlyValidUnderCurrentPatternAtLegacyVersion_ThrowsWithPath()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].DebtorAgent = new FinancialInstitution { Bic = "COBADE10" };
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => ValidateCreditTransfer(initiation));
+
+        exception.Path.ShouldBe("PaymentInformations[0].DebtorAgent.Bic");
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_BicOnlyValidUnderCurrentPatternAtCurrentVersion_DoesNotThrow()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].DebtorAgent = new FinancialInstitution { Bic = "COBADE10" };
+
+        Should.NotThrow(() => PainValidator.ValidateCreditTransfer(initiation, Pain001Version.V09, new Pain00xWriterOptions()));
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_BicWithTrailingNewlineAtLegacyVersion_ThrowsWithPath()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].DebtorAgent = new FinancialInstitution { Bic = "COBADEFF\n" };
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => ValidateCreditTransfer(initiation));
+
+        exception.Path.ShouldBe("PaymentInformations[0].DebtorAgent.Bic");
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_BicWithTrailingNewlineAtCurrentVersion_ThrowsWithPath()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].DebtorAgent = new FinancialInstitution { Bic = "COBADEFF\n" };
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => PainValidator.ValidateCreditTransfer(initiation, Pain001Version.V09, new Pain00xWriterOptions()));
+
+        exception.Path.ShouldBe("PaymentInformations[0].DebtorAgent.Bic");
     }
 
     [Theory]
@@ -650,6 +693,106 @@ public class PainValidatorTests
         exception.Path.ShouldBe("PaymentInformations[0].Transactions[0].RemittanceInformation.CreditorReference");
     }
 
+    [Theory]
+    [InlineData("RADM")]
+    [InlineData("RPIN")]
+    [InlineData("FXDR")]
+    [InlineData("DISP")]
+    [InlineData("PUOR")]
+    [InlineData("SCOR")]
+    public void ValidateCreditTransfer_CreditorReferenceTypeCodeDefined_DoesNotThrow(string code)
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].Transactions[0].RemittanceInformation = new RemittanceInformation
+        {
+            CreditorReference = "RF18539007547034",
+            CreditorReferenceTypeCode = code,
+        };
+
+        Should.NotThrow(() => ValidateCreditTransfer(initiation));
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_CreditorReferenceTypeCodeUndefined_ThrowsWithPath()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].Transactions[0].RemittanceInformation = new RemittanceInformation
+        {
+            CreditorReference = "RF18539007547034",
+            CreditorReferenceTypeCode = "XXXX",
+        };
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => ValidateCreditTransfer(initiation));
+
+        exception.Path.ShouldBe("PaymentInformations[0].Transactions[0].RemittanceInformation.CreditorReferenceTypeCode");
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_CreditorReferenceTypeCodeWithoutReference_DoesNotThrow()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].Transactions[0].RemittanceInformation = new RemittanceInformation
+        {
+            CreditorReferenceTypeCode = "SCOR",
+        };
+
+        Should.NotThrow(() => ValidateCreditTransfer(initiation));
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_CreditorReferenceTypeCodeUndefinedWithoutReference_ThrowsWithPath()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].Transactions[0].RemittanceInformation = new RemittanceInformation
+        {
+            CreditorReferenceTypeCode = "XXXX",
+        };
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => ValidateCreditTransfer(initiation));
+
+        exception.Path.ShouldBe("PaymentInformations[0].Transactions[0].RemittanceInformation.CreditorReferenceTypeCode");
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_CreditorReferenceIssuerWithoutReference_DoesNotThrow()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].Transactions[0].RemittanceInformation = new RemittanceInformation
+        {
+            CreditorReferenceIssuer = "Example Issuer",
+        };
+
+        Should.NotThrow(() => ValidateCreditTransfer(initiation));
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_CreditorReferenceIssuerExceeds35CharactersWithoutReference_ThrowsWithPath()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].Transactions[0].RemittanceInformation = new RemittanceInformation
+        {
+            CreditorReferenceIssuer = new string('A', 36),
+        };
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => ValidateCreditTransfer(initiation));
+
+        exception.Path.ShouldBe("PaymentInformations[0].Transactions[0].RemittanceInformation.CreditorReferenceIssuer");
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_CreditorReferenceIssuerWhitespaceOnlyWithoutReference_ThrowsWithPath()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].Transactions[0].RemittanceInformation = new RemittanceInformation
+        {
+            CreditorReferenceIssuer = " ",
+        };
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => ValidateCreditTransfer(initiation));
+
+        exception.Path.ShouldBe("PaymentInformations[0].Transactions[0].RemittanceInformation.CreditorReferenceIssuer");
+    }
+
     [Fact]
     public void ValidateCreditTransfer_ServiceLevelCodeEmpty_ThrowsWithPath()
     {
@@ -704,6 +847,17 @@ public class PainValidatorTests
     {
         var initiation = ValidCreditTransfer();
         initiation.PaymentInformations[0].DebtorAccount = new AccountIdentification { OtherId = new string('A', 35) };
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => ValidateCreditTransfer(initiation));
+
+        exception.Path.ShouldBe("PaymentInformations[0].DebtorAccount.OtherId");
+    }
+
+    [Fact]
+    public void ValidateCreditTransfer_DebtorAccountOtherIdWhitespaceOnly_ThrowsWithPath()
+    {
+        var initiation = ValidCreditTransfer();
+        initiation.PaymentInformations[0].DebtorAccount = new AccountIdentification { OtherId = " " };
 
         var exception = Should.Throw<Iso20022ValidationException>(() => ValidateCreditTransfer(initiation));
 
@@ -927,6 +1081,50 @@ public class PainValidatorTests
     {
         var initiation = ValidDirectDebit();
         initiation.PaymentInformations[0].CreditorAgent = new FinancialInstitution { Bic = "C0BADEFF" };
+
+        Should.NotThrow(() => PainValidator.ValidateDirectDebit(initiation, Pain008Version.V08, new Pain00xWriterOptions()));
+    }
+
+    [Theory]
+    [InlineData("COBADEFF")]
+    [InlineData("COBADEFFXXX")]
+    [InlineData("MARKDEF1100")]
+    public void ValidateDirectDebit_ValidBicsAtLegacyVersion_DoesNotThrow(string bic)
+    {
+        var initiation = ValidDirectDebit();
+        initiation.PaymentInformations[0].CreditorAgent = new FinancialInstitution { Bic = bic };
+
+        Should.NotThrow(() => ValidateDirectDebit(initiation));
+    }
+
+    [Theory]
+    [InlineData("COBADEFF")]
+    [InlineData("COBADEFFXXX")]
+    [InlineData("MARKDEF1100")]
+    public void ValidateDirectDebit_ValidBicsAtCurrentVersion_DoesNotThrow(string bic)
+    {
+        var initiation = ValidDirectDebit();
+        initiation.PaymentInformations[0].CreditorAgent = new FinancialInstitution { Bic = bic };
+
+        Should.NotThrow(() => PainValidator.ValidateDirectDebit(initiation, Pain008Version.V08, new Pain00xWriterOptions()));
+    }
+
+    [Fact]
+    public void ValidateDirectDebit_BicOnlyValidUnderCurrentPatternAtLegacyVersion_ThrowsWithPath()
+    {
+        var initiation = ValidDirectDebit();
+        initiation.PaymentInformations[0].CreditorAgent = new FinancialInstitution { Bic = "COBADE10" };
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => ValidateDirectDebit(initiation));
+
+        exception.Path.ShouldBe("PaymentInformations[0].CreditorAgent.Bic");
+    }
+
+    [Fact]
+    public void ValidateDirectDebit_BicOnlyValidUnderCurrentPatternAtCurrentVersion_DoesNotThrow()
+    {
+        var initiation = ValidDirectDebit();
+        initiation.PaymentInformations[0].CreditorAgent = new FinancialInstitution { Bic = "COBADE10" };
 
         Should.NotThrow(() => PainValidator.ValidateDirectDebit(initiation, Pain008Version.V08, new Pain00xWriterOptions()));
     }

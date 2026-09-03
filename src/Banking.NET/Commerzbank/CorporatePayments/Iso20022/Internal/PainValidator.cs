@@ -19,12 +19,17 @@ internal static class PainValidator
     private static readonly Regex IbanFormat = new("^[A-Z]{2}[0-9]{2}[A-Z0-9]{1,30}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     /// <summary>The BIC pattern of the current schemas (<c>BICFIDec2014Identifier</c>/<c>AnyBICDec2014Identifier</c>).</summary>
-    private static readonly Regex BicFormatCurrent = new("^[A-Z0-9]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    /// <remarks>Anchored with <c>\z</c> rather than <c>$</c>, since <c>$</c> also matches immediately before a trailing <c>\n</c> in .NET regex.</remarks>
+    private static readonly Regex BicFormatCurrent = new(@"^[A-Z0-9]{4}[A-Z]{2}[A-Z0-9]{2}([A-Z0-9]{3})?\z", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     /// <summary>The BIC pattern of the legacy schemas (<c>BICIdentifier</c>/<c>AnyBICIdentifier</c>): no digits in positions 1-6.</summary>
-    private static readonly Regex BicFormatLegacy = new("^[A-Z]{6}[A-Z2-9][A-NP-Z0-9]([A-Z0-9]{3})?$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    /// <remarks>Anchored with <c>\z</c> rather than <c>$</c>, since <c>$</c> also matches immediately before a trailing <c>\n</c> in .NET regex.</remarks>
+    private static readonly Regex BicFormatLegacy = new(@"^[A-Z]{6}[A-Z2-9][A-NP-Z0-9]([A-Z0-9]{3})?\z", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex CurrencyFormat = new("^[A-Z]{3}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    /// <summary>The allowed creditor reference type codes (ISO 20022 <c>DocumentType3Code</c>), identical across all four pain.001/pain.008 schema versions.</summary>
+    private static readonly string[] CreditorReferenceTypeCodes = ["RADM", "RPIN", "FXDR", "DISP", "PUOR", "SCOR"];
 
     /// <summary>Validates a pain.001 credit transfer initiation.</summary>
     /// <exception cref="Iso20022ValidationException">The initiation fails a validation rule.</exception>
@@ -245,7 +250,7 @@ internal static class PainValidator
     private static void ValidateAccount(AccountIdentification account, string path, Pain00xWriterOptions options)
     {
         var hasIban = !string.IsNullOrWhiteSpace(account.Iban);
-        var hasOtherId = !string.IsNullOrWhiteSpace(account.OtherId);
+        var hasOtherId = account.OtherId is not null;
 
         if (!hasIban && !hasOtherId)
             throw new Iso20022ValidationException("An account requires either an IBAN or another identifier.", path);
@@ -255,11 +260,7 @@ internal static class PainValidator
         if (hasIban)
             ValidateIbanFormat(account.Iban!, $"{path}.Iban");
         else
-        {
-            if (account.OtherId!.Length > OtherIdMaxLength)
-                throw new Iso20022ValidationException($"An other account identifier must not exceed {OtherIdMaxLength} characters.", $"{path}.OtherId");
-            ValidateCharacterSet(account.OtherId, $"{path}.OtherId", options);
-        }
+            ValidateOptionalId(account.OtherId, $"{path}.OtherId", options, OtherIdMaxLength);
 
         if (account.Currency is { } currency && !CurrencyFormat.IsMatch(currency))
             throw new Iso20022ValidationException("A currency must be a 3-letter uppercase ISO 4217 code.", $"{path}.Currency");
@@ -324,7 +325,8 @@ internal static class PainValidator
             return;
 
         var hasUnstructured = remittance.Unstructured.Count > 0;
-        var hasStructured = remittance.CreditorReference is not null;
+        var hasReference = remittance.CreditorReference is not null;
+        var hasStructured = hasReference || remittance.CreditorReferenceTypeCode is not null || remittance.CreditorReferenceIssuer is not null;
 
         if (hasUnstructured && hasStructured)
             throw new Iso20022ValidationException("Remittance information must carry either unstructured lines or a creditor reference, not both.", path);
@@ -344,17 +346,26 @@ internal static class PainValidator
             }
         }
 
-        if (hasStructured)
+        if (hasReference)
         {
             if (string.IsNullOrWhiteSpace(remittance.CreditorReference))
                 throw new Iso20022ValidationException("A creditor reference must not be empty or whitespace-only when set.", $"{path}.CreditorReference");
             if (remittance.CreditorReference!.Length > IdMaxLength)
                 throw new Iso20022ValidationException($"A creditor reference must not exceed {IdMaxLength} characters.", $"{path}.CreditorReference");
             ValidateCharacterSet(remittance.CreditorReference, $"{path}.CreditorReference", options);
-
-            ValidateOptionalId(remittance.CreditorReferenceTypeCode, $"{path}.CreditorReferenceTypeCode", options);
-            ValidateOptionalId(remittance.CreditorReferenceIssuer, $"{path}.CreditorReferenceIssuer", options);
         }
+
+        // CdtrRefInf/Tp and CdtrRefInf/Ref are independently optional per the XSD, so a type/issuer without a
+        // reference is validated, not rejected.
+        ValidateCreditorReferenceTypeCode(remittance.CreditorReferenceTypeCode, $"{path}.CreditorReferenceTypeCode");
+        ValidateOptionalId(remittance.CreditorReferenceIssuer, $"{path}.CreditorReferenceIssuer", options);
+    }
+
+    /// <summary>Validates that <paramref name="code"/>, when set, is a defined ISO 20022 <c>DocumentType3Code</c> value.</summary>
+    private static void ValidateCreditorReferenceTypeCode(string? code, string path)
+    {
+        if (code is not null && Array.IndexOf(CreditorReferenceTypeCodes, code) < 0)
+            throw new Iso20022ValidationException($"A creditor reference type code must be one of: {string.Join(", ", CreditorReferenceTypeCodes)}.", path);
     }
 
     private static void ValidateCharacterSet(string value, string path, Pain00xWriterOptions options)

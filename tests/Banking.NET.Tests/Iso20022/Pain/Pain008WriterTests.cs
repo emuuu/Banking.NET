@@ -223,6 +223,28 @@ public class Pain008WriterTests
     }
 
     [Theory]
+    [InlineData(Pain008Version.V02, "pain.008.001.02.xsd")]
+    [InlineData(Pain008Version.V08, "pain.008.001.08.xsd")]
+    public void Write_CreditorReferenceTypeCodeWithoutReference_WritesTpWithoutRefAndValidatesAgainstSchema(Pain008Version version, string schemaFileName)
+    {
+        var initiation = MinimalInitiation();
+        initiation.PaymentInformations[0].Transactions[0].RemittanceInformation = new RemittanceInformation
+        {
+            CreditorReferenceTypeCode = "SCOR",
+        };
+
+        var xml = Pain008Writer.WriteToString(initiation, version);
+        var document = XDocument.Parse(xml);
+
+        var ns = document.Root!.Name.Namespace;
+        var creditorRefInfo = document.Descendants(ns + "CdtrRefInf").Single();
+        creditorRefInfo.Element(ns + "Tp")!.Element(ns + "CdOrPrtry")!.Element(ns + "Cd")!.Value.ShouldBe("SCOR");
+        creditorRefInfo.Element(ns + "Ref").ShouldBeNull();
+
+        SchemaValidator.Validate(schemaFileName, xml).ShouldBeEmpty();
+    }
+
+    [Theory]
     [InlineData(12.3, "12.30")]
     [InlineData(12.34, "12.34")]
     public void Write_Amount_FormatsWithExactlyTwoDecimalPlaces(decimal amount, string expected)

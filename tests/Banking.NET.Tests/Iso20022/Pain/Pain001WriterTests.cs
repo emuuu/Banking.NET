@@ -288,6 +288,48 @@ public class Pain001WriterTests
     }
 
     [Fact]
+    public void Write_StructuredRemittanceInformationWithCustomTypeCodeAndIssuer_WritesGivenValues()
+    {
+        var initiation = MinimalInitiation();
+        initiation.PaymentInformations[0].Transactions[0].RemittanceInformation = new RemittanceInformation
+        {
+            CreditorReference = "RF18539007547034",
+            CreditorReferenceTypeCode = "RADM",
+            CreditorReferenceIssuer = "Example Issuer",
+        };
+
+        var document = Pain001Writer.Write(initiation, Pain001Version.V03);
+
+        var ns = document.Root!.Name.Namespace;
+        var creditorRefInfo = document.Descendants(ns + "CdtrRefInf").Single();
+        creditorRefInfo.Element(ns + "Tp")!.Element(ns + "CdOrPrtry")!.Element(ns + "Cd")!.Value.ShouldBe("RADM");
+        creditorRefInfo.Element(ns + "Tp")!.Element(ns + "Issr")!.Value.ShouldBe("Example Issuer");
+        creditorRefInfo.Element(ns + "Ref")!.Value.ShouldBe("RF18539007547034");
+    }
+
+    [Theory]
+    [InlineData(Pain001Version.V03, "pain.001.001.03.xsd")]
+    [InlineData(Pain001Version.V09, "pain.001.001.09.xsd")]
+    public void Write_CreditorReferenceTypeCodeWithoutReference_WritesTpWithoutRefAndValidatesAgainstSchema(Pain001Version version, string schemaFileName)
+    {
+        var initiation = MinimalInitiation();
+        initiation.PaymentInformations[0].Transactions[0].RemittanceInformation = new RemittanceInformation
+        {
+            CreditorReferenceTypeCode = "SCOR",
+        };
+
+        var xml = Pain001Writer.WriteToString(initiation, version);
+        var document = XDocument.Parse(xml);
+
+        var ns = document.Root!.Name.Namespace;
+        var creditorRefInfo = document.Descendants(ns + "CdtrRefInf").Single();
+        creditorRefInfo.Element(ns + "Tp")!.Element(ns + "CdOrPrtry")!.Element(ns + "Cd")!.Value.ShouldBe("SCOR");
+        creditorRefInfo.Element(ns + "Ref").ShouldBeNull();
+
+        SchemaValidator.Validate(schemaFileName, xml).ShouldBeEmpty();
+    }
+
+    [Fact]
     public void Write_UltimateDebtorAndCreditor_WritesAtPaymentInformationAndTransactionLevel()
     {
         var initiation = MinimalInitiation();

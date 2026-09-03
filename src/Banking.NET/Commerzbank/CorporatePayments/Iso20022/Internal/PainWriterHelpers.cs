@@ -148,6 +148,8 @@ internal static class PainWriterHelpers
     /// <summary>
     /// Writes an <c>RmtInf</c> element for unstructured (<c>Ustrd</c>) or structured creditor reference
     /// (<c>Strd/CdtrRefInf</c>) remittance information, or <see langword="null"/> when neither is set.
+    /// <c>CdtrRefInf/Tp</c> is written whenever a type code or issuer is set, even without
+    /// <c>CdtrRefInf/Ref</c>, since both are independently optional per the XSD.
     /// </summary>
     public static XElement? WriteRemittance(XNamespace ns, RemittanceInformation remittance)
     {
@@ -159,16 +161,18 @@ internal static class PainWriterHelpers
             return element;
         }
 
-        if (remittance.CreditorReference is { } reference && !string.IsNullOrWhiteSpace(reference))
+        if (remittance.CreditorReference is not null || remittance.CreditorReferenceTypeCode is not null || remittance.CreditorReferenceIssuer is not null)
         {
             var type = new XElement(ns + "Tp",
                 new XElement(ns + "CdOrPrtry", new XElement(ns + "Cd", remittance.CreditorReferenceTypeCode ?? "SCOR")));
             if (remittance.CreditorReferenceIssuer is { } issuer)
                 type.Add(new XElement(ns + "Issr", issuer));
 
-            return new XElement(ns + "RmtInf",
-                new XElement(ns + "Strd",
-                    new XElement(ns + "CdtrRefInf", type, new XElement(ns + "Ref", reference))));
+            var creditorReferenceInfo = new XElement(ns + "CdtrRefInf", type);
+            if (remittance.CreditorReference is { } reference)
+                creditorReferenceInfo.Add(new XElement(ns + "Ref", reference));
+
+            return new XElement(ns + "RmtInf", new XElement(ns + "Strd", creditorReferenceInfo));
         }
 
         return null;
