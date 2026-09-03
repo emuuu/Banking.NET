@@ -1,0 +1,15 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Banking.NET/Banking.NET.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Banking.NET.Tests/Banking.NET.Tests.csproj" />
+  </Folder>
+  <Folder Name="/samples/">
+    <Project Path="samples/Banking.NET.Samples.Console/Banking.NET.Samples.Console.csproj" />
+  </Folder>
+  <Folder Name="/docs/">
+    <Project Path="docs/Banking.NET.Docs/Banking.NET.Docs.csproj" />
+    <Project Path="docs/Banking.NET.Docs.Generator/Banking.NET.Docs.Generator.csproj" />
+  </Folder>
+</Solution>

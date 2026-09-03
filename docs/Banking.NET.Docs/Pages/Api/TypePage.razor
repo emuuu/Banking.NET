@@ -1,0 +1,139 @@
+@page "/api/{Name}"
+@inject IRestApiDocService DocService
+
+<PageTitle>@(_type?.Name ?? _enum?.Name ?? "Not Found") - Banking.NET Docs</PageTitle>
+
+@if (_type is null && _enum is null)
+{
+    <div class="text-center py-5">
+        <h2>Not Found</h2>
+        <p class="text-muted">No public type or enum named <code>@Name</code> was found.</p>
+        <a href="api" class="btn btn-primary">Back to API Reference</a>
+    </div>
+}
+else if (_type is not null)
+{
+    <div class="doc-content">
+        <p><a href="api" class="text-decoration-none">&larr; Back to API Reference</a></p>
+        <h1>@_type.Name <small class="text-muted fs-5">@_type.Kind</small></h1>
+        <p class="text-muted"><code>@_type.Namespace</code></p>
+        @if (!string.IsNullOrEmpty(_type.Description))
+        {
+            <p class="lead">@_type.Description</p>
+        }
+
+        @if (_type.Constructors.Count > 0)
+        {
+            <h3 class="mt-4">Constructors</h3>
+            @foreach (var ctor in _type.Constructors)
+            {
+                <h5 class="mt-3"><code>@FormatSignature(_type.Name, ctor.Parameters)</code></h5>
+                @if (!string.IsNullOrEmpty(ctor.Description))
+                {
+                    <p>@ctor.Description</p>
+                }
+                <ParamTable Parameters="ctor.Parameters" />
+            }
+        }
+
+        @if (_type.Properties.Count > 0)
+        {
+            <h3 class="mt-4">Properties</h3>
+            <div class="table-responsive">
+                <table class="table table-sm align-middle">
+                    <thead>
+                        <tr>
+                            <th scope="col">Name</th>
+                            <th scope="col">Type</th>
+                            <th scope="col">Accessors</th>
+                            <th scope="col">Required</th>
+                            <th scope="col">Description</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var prop in _type.Properties)
+                        {
+                            <tr>
+                                <th scope="row"><code>@prop.Name</code></th>
+                                <td><code>@prop.Type</code></td>
+                                <td><code>@prop.Accessors</code></td>
+                                <td>@(prop.Required ? "Yes" : "No")</td>
+                                <td>@prop.Description</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+
+        @if (_type.Methods.Count > 0)
+        {
+            <h3 class="mt-4">Methods</h3>
+            @foreach (var method in _type.Methods)
+            {
+                <h5 class="mt-3"><code>@FormatMethodSignature(method)</code></h5>
+                @if (!string.IsNullOrEmpty(method.Description))
+                {
+                    <p>@method.Description</p>
+                }
+                <ParamTable Parameters="method.Parameters" />
+            }
+        }
+    </div>
+}
+else if (_enum is not null)
+{
+    <div class="doc-content">
+        <p><a href="api" class="text-decoration-none">&larr; Back to API Reference</a></p>
+        <h1>@_enum.Name <small class="text-muted fs-5">Enum@(_enum.IsFlags ? " (Flags)" : "")</small></h1>
+        <p class="text-muted"><code>@_enum.Namespace</code></p>
+        @if (!string.IsNullOrEmpty(_enum.Description))
+        {
+            <p class="lead">@_enum.Description</p>
+        }
+
+        <div class="table-responsive">
+            <table class="table table-sm align-middle">
+                <thead>
+                    <tr>
+                        <th scope="col">Name</th>
+                        <th scope="col">Serialized value</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var value in _enum.Values)
+                    {
+                        <tr>
+                            <th scope="row"><code>@value.Name</code></th>
+                            <td><code>@value.SerializedValue</code></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+
+@code {
+    [Parameter] public string Name { get; set; } = "";
+
+    private TypeDoc? _type;
+    private EnumDoc? _enum;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        await DocService.InitializeAsync();
+        _type = DocService.GetType(Name);
+        _enum = _type is null ? DocService.GetEnum(Name) : null;
+    }
+
+    private static string FormatSignature(string name, List<ParamDocEntry> parameters) =>
+        $"{name}({string.Join(", ", parameters.Select(p => $"{p.Type} {p.Name}"))})";
+
+    private static string FormatMethodSignature(MethodDoc method)
+    {
+        var modifier = method.IsStatic ? "static " : "";
+        var parameters = string.Join(", ", method.Parameters.Select(p => $"{p.Type} {p.Name}"));
+        return $"{modifier}{method.ReturnType} {method.Name}({parameters})";
+    }
+}

@@ -1,5 +1,5 @@
 name: Feature Request
-description: Suggest a new feature for Commerzbank.NET
+description: Suggest a new feature for Banking.NET
 labels: [enhancement]
 body:
   - type: textarea

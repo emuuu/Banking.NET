@@ -1,11 +1,11 @@
-# Contributing to Commerzbank.NET
+# Contributing to Banking.NET
 
-Thank you for considering contributing to Commerzbank.NET.
+Thank you for considering contributing to Banking.NET.
 
 ## Reporting Issues
 
-- **Bug Reports:** Use the [Bug Report template](https://github.com/emuuu/Commerzbank.NET/issues/new?template=bug_report.yml) and include reproduction steps, expected/actual behavior, and your environment (.NET version, OS).
-- **Feature Requests:** Use the [Feature Request template](https://github.com/emuuu/Commerzbank.NET/issues/new?template=feature_request.yml) and describe the use case you're trying to solve.
+- **Bug Reports:** Use the [Bug Report template](https://github.com/emuuu/Banking.NET/issues/new?template=bug_report.yml) and include reproduction steps, expected/actual behavior, and your environment (.NET version, OS).
+- **Feature Requests:** Use the [Feature Request template](https://github.com/emuuu/Banking.NET/issues/new?template=feature_request.yml) and describe the use case you're trying to solve.
 
 ## Development Setup
 
@@ -17,8 +17,8 @@ Thank you for considering contributing to Commerzbank.NET.
 ### Clone & Build
 
 ```bash
-git clone https://github.com/emuuu/Commerzbank.NET.git
-cd Commerzbank.NET
+git clone https://github.com/emuuu/Banking.NET.git
+cd Banking.NET
 dotnet restore
 dotnet build
 ```

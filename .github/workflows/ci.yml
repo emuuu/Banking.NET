@@ -19,7 +19,7 @@ jobs:
       - run: dotnet restore
       - run: dotnet build -c Release --no-restore
       - run: dotnet test -c Release --no-build
-        working-directory: tests/Commerzbank.NET.Tests
+        working-directory: tests/Banking.NET.Tests
         env:
           # Sandbox integration tests run only when these secrets are configured; they are skipped otherwise.
           COMMERZBANK_SANDBOX_CLIENT_ID: ${{ secrets.COMMERZBANK_SANDBOX_CLIENT_ID }}

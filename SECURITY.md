@@ -13,7 +13,7 @@
 Instead, report them privately via email:
 
 - **Email:** contact@emu-fake.com
-- **Subject:** `[SECURITY] Commerzbank.NET — <brief description>`
+- **Subject:** `[SECURITY] Banking.NET — <brief description>`
 
 Please include:
 

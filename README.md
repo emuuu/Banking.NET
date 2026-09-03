@@ -1,16 +1,16 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/emuuu/Commerzbank.NET/main/icon.png" alt="Commerzbank.NET" width="128" />
+  <img src="https://raw.githubusercontent.com/emuuu/Banking.NET/main/icon.png" alt="Banking.NET" width="128" />
 </p>
 
-<h1 align="center">Commerzbank.NET</h1>
+<h1 align="center">Banking.NET</h1>
 
-A .NET client library for the Commerzbank Corporate Payments API: OAuth client credentials, mutual TLS, EBICS order types, fragmented downloads and ISO 20022 (camt, pain) readers and writers. This is an unofficial, community-maintained library and is not affiliated with or endorsed by Commerzbank AG.
+Banking.NET is a provider-neutral home for .NET banking API client libraries. The Commerzbank Corporate Payments API is the first (currently only) provider, available under the `Banking.NET.Commerzbank` namespace: OAuth client credentials, mutual TLS, EBICS order types, fragmented downloads and ISO 20022 (camt, pain) readers and writers. This is an unofficial, community-maintained library and is not affiliated with or endorsed by Commerzbank AG.
 
-[![NuGet](https://img.shields.io/nuget/v/Commerzbank.NET.svg)](https://www.nuget.org/packages/Commerzbank.NET)
-[![NuGet Downloads](https://img.shields.io/nuget/dt/Commerzbank.NET.svg)](https://www.nuget.org/packages/Commerzbank.NET)
-[![CI](https://github.com/emuuu/Commerzbank.NET/actions/workflows/ci.yml/badge.svg)](https://github.com/emuuu/Commerzbank.NET/actions/workflows/ci.yml)
+[![NuGet](https://img.shields.io/nuget/v/Banking.NET.svg)](https://www.nuget.org/packages/Banking.NET)
+[![NuGet Downloads](https://img.shields.io/nuget/dt/Banking.NET.svg)](https://www.nuget.org/packages/Banking.NET)
+[![CI](https://github.com/emuuu/Banking.NET/actions/workflows/ci.yml/badge.svg)](https://github.com/emuuu/Banking.NET/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Docs](https://img.shields.io/badge/Docs-GitHub%20Pages-blue)](https://emuuu.github.io/Commerzbank.NET/)
+[![Docs](https://img.shields.io/badge/Docs-GitHub%20Pages-blue)](https://emuuu.github.io/Banking.NET/)
 
 **Feature highlights:**
 
@@ -32,7 +32,7 @@ A .NET client library for the Commerzbank Corporate Payments API: OAuth client c
 ## Installation
 
 ```bash
-dotnet add package Commerzbank.NET
+dotnet add package Banking.NET
 ```
 
 ## Getting Started
@@ -304,7 +304,7 @@ catch (CommerzbankApiException ex)
 
 ## Docs & Playground
 
-The [documentation site](https://emuuu.github.io/Commerzbank.NET/) is generated from the library's XML docs and includes an interactive playground. The playground talks to the sandbox only — production requires mutual TLS, which a browser cannot do — and client credentials entered there stay in the browser's session storage; they are never sent anywhere but the Commerzbank sandbox.
+The [documentation site](https://emuuu.github.io/Banking.NET/) is generated from the library's XML docs and includes an interactive playground. The playground talks to the sandbox only — production requires mutual TLS, which a browser cannot do — and client credentials entered there stay in the browser's session storage; they are never sent anywhere but the Commerzbank sandbox.
 
 ## Contributing
 

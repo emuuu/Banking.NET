@@ -3,9 +3,9 @@ on:
   push:
     branches: [main]
     paths:
-      - 'docs/Commerzbank.NET.Docs/**'
-      - 'docs/Commerzbank.NET.Docs.Generator/**'
-      - 'src/Commerzbank.NET/**'
+      - 'docs/Banking.NET.Docs/**'
+      - 'docs/Banking.NET.Docs.Generator/**'
+      - 'src/Banking.NET/**'
   workflow_dispatch:
 
 permissions:
@@ -29,12 +29,12 @@ jobs:
         with:
           dotnet-version: 10.0.x
       - name: Publish docs app
-        run: dotnet publish docs/Commerzbank.NET.Docs/Commerzbank.NET.Docs.csproj -c Release -o output
+        run: dotnet publish docs/Banking.NET.Docs/Banking.NET.Docs.csproj -c Release -o output
       - name: Rewrite base href
         run: |
-          sed -i 's|<base href="/" />|<base href="/Commerzbank.NET/" />|g' output/wwwroot/index.html
+          sed -i 's|<base href="/" />|<base href="/Banking.NET/" />|g' output/wwwroot/index.html
           if [ -f output/wwwroot/404.html ]; then
-            sed -i 's|<base href="/" />|<base href="/Commerzbank.NET/" />|g' output/wwwroot/404.html
+            sed -i 's|<base href="/" />|<base href="/Banking.NET/" />|g' output/wwwroot/404.html
           fi
       - uses: actions/upload-pages-artifact@v5
         with:

@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk.BlazorWebAssembly">
+
+  <PropertyGroup>
+    <TargetFramework>$(ToolsTargetFramework)</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>Banking.NET.Docs</RootNamespace>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.WebAssembly.DevServer" PrivateAssets="all" />
+    <PackageReference Include="Markdig" />
+    <PackageReference Include="YamlDotNet" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../../src/Banking.NET/Banking.NET.csproj" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <BaseUrl Condition="'$(BaseUrl)' == ''">https://emuuu.github.io/Banking.NET</BaseUrl>
+  </PropertyGroup>
+
+  <Target Name="GenerateDocsData" BeforeTargets="Build">
+    <Exec Command="dotnet run --project ../Banking.NET.Docs.Generator -- $(MSBuildProjectDirectory)/wwwroot --base-url $(BaseUrl)" />
+  </Target>
+
+</Project>

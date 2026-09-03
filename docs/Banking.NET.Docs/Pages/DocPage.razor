@@ -1,0 +1,69 @@
+@page "/docs/{**Slug}"
+@inject IDocContentService ContentService
+
+<PageTitle>@(_article?.Title ?? "Loading...") - Banking.NET Docs</PageTitle>
+
+@if (_article is not null)
+{
+    <HeadContent>
+        <meta name="description" content="@_article.Description" />
+        <meta property="og:type" content="article" />
+        <meta property="og:title" content="@(_article.Title) - Banking.NET" />
+        <meta property="og:description" content="@_article.Description" />
+    </HeadContent>
+}
+
+@if (_loading)
+{
+    <div class="d-flex justify-content-center py-5">
+        <div class="spinner-border text-primary" role="status">
+            <span class="visually-hidden">Loading...</span>
+        </div>
+    </div>
+}
+else if (_article is null)
+{
+    <div class="text-center py-5">
+        <h2>Page Not Found</h2>
+        <p class="text-muted">The page <code>@Slug</code> could not be found.</p>
+        <a href="" class="btn btn-primary">Go Home</a>
+    </div>
+}
+else
+{
+    <div class="doc-layout d-flex">
+        <article class="doc-content flex-grow-1 min-width-0">
+            <h1>@_article.Title</h1>
+            @if (!string.IsNullOrEmpty(_article.Description))
+            {
+                <p class="lead text-muted">@_article.Description</p>
+            }
+
+            <MarkdownRenderer Html="@_article.HtmlContent" />
+        </article>
+
+        <OnThisPage Headings="_article.Headings" />
+    </div>
+}
+
+@code {
+    [Parameter] public string? Slug { get; set; }
+
+    private Models.DocArticle? _article;
+    private bool _loading = true;
+    private string? _loadedSlug;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        var slug = Slug ?? "";
+        if (slug == _loadedSlug) return;
+
+        _loadedSlug = slug;
+        _loading = true;
+        _article = null;
+        StateHasChanged();
+
+        _article = await ContentService.GetArticleAsync(slug);
+        _loading = false;
+    }
+}

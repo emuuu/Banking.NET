@@ -1,0 +1,56 @@
+@page "/api"
+@inject IRestApiDocService DocService
+
+<PageTitle>API Reference - Banking.NET Docs</PageTitle>
+
+<div class="doc-content">
+    <h1>API Reference</h1>
+    <p class="lead text-muted">Generated from the XML documentation of the Banking.NET assembly.</p>
+
+    @foreach (var group in DocService.GroupOrder)
+    {
+        var types = DocService.GetTypesByGroup(group).OrderBy(t => t.Name, StringComparer.Ordinal).ToList();
+        var enums = DocService.GetEnumsByGroup(group).OrderBy(e => e.Name, StringComparer.Ordinal).ToList();
+        if (types.Count == 0 && enums.Count == 0) continue;
+
+        <h4 class="mt-4 mb-3 text-muted" style="border-bottom:2px solid #dee2e6;padding-bottom:.4rem;">@group</h4>
+
+        <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-3">
+            @foreach (var type in types)
+            {
+                <div class="col">
+                    <a href="@($"api/{type.Name}")" class="text-decoration-none">
+                        <div class="card h-100 service-card">
+                            <div class="card-body">
+                                <h5 class="card-title">@type.Name</h5>
+                                <p class="card-text text-muted small">@type.Description</p>
+                                <code class="small">@type.Kind</code>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            }
+            @foreach (var enumDoc in enums)
+            {
+                <div class="col">
+                    <a href="@($"api/{enumDoc.Name}")" class="text-decoration-none">
+                        <div class="card h-100 service-card">
+                            <div class="card-body">
+                                <h5 class="card-title">@enumDoc.Name</h5>
+                                <p class="card-text text-muted small">@enumDoc.Description</p>
+                                <code class="small">Enum</code>
+                            </div>
+                        </div>
+                    </a>
+                </div>
+            }
+        </div>
+    }
+</div>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        await DocService.InitializeAsync();
+    }
+}

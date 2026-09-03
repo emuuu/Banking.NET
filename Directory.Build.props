@@ -23,11 +23,11 @@
     <VersionPrefix>1.0.0</VersionPrefix>
     <Authors>Timm Bremekamp</Authors>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
-    <PackageProjectUrl>https://github.com/emuuu/Commerzbank.NET</PackageProjectUrl>
-    <RepositoryUrl>https://github.com/emuuu/Commerzbank.NET</RepositoryUrl>
+    <PackageProjectUrl>https://github.com/emuuu/Banking.NET</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/emuuu/Banking.NET</RepositoryUrl>
     <RepositoryType>git</RepositoryType>
     <PackageTags>commerzbank;corporate-payments;ebics;iso20022;sepa;camt;pain;banking;api;client</PackageTags>
     <Copyright>Copyright (c) 2026 Timm Bremekamp</Copyright>
-    <Description>A .NET client library for the Commerzbank Corporate Payments API.</Description>
+    <Description>A .NET client library for banking APIs. Currently supports the Commerzbank Corporate Payments API: OAuth client credentials, mutual TLS, EBICS order types, fragmented downloads and ISO 20022 (camt, pain) readers and writers. Not affiliated with or endorsed by Commerzbank AG.</Description>
   </PropertyGroup>
 </Project>

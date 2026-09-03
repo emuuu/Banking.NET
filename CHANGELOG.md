@@ -34,4 +34,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 - Structural and SEPA-rulebook validation (`Iso20022ValidationException`) covering identifier and name lengths, IBAN/BIC format, positive amounts, and mandate requirements; optional SEPA character set validation via `Pain00xWriterOptions.ValidateCharacterSet`.
 
 **Samples & Documentation**
-- `Commerzbank.NET.Samples.Console`: a sandbox walkthrough covering heartbeat, listing, downloading, camt/pain.002 inspection, message confirmation, and submitting a sample credit transfer.
+- `Banking.NET.Samples.Console`: a sandbox walkthrough covering heartbeat, listing, downloading, camt/pain.002 inspection, message confirmation, and submitting a sample credit transfer.
