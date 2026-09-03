@@ -10,13 +10,6 @@ namespace Banking.NET.Docs.Generator;
 /// <summary>Converts the markdown files under <c>wwwroot/content</c> into a searchable, navigable content index.</summary>
 public partial class ContentIndexGenerator
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
     private static readonly MarkdownPipeline Pipeline = new MarkdownPipelineBuilder()
         .UseAdvancedExtensions()
         .UseAutoIdentifiers()
@@ -68,7 +61,7 @@ public partial class ContentIndexGenerator
 
         entries = entries.OrderBy(e => e.Category, StringComparer.Ordinal).ThenBy(e => e.Order).ThenBy(e => e.Title, StringComparer.Ordinal).ToList();
 
-        var json = JsonSerializer.Serialize(entries, JsonOptions);
+        var json = JsonSerializer.Serialize(entries, DocsJsonContext.Default.ListContentIndexEntry);
         await File.WriteAllTextAsync(outputPath, json).ConfigureAwait(false);
         Console.WriteLine($"  Generated {entries.Count} content entries -> {Path.GetFileName(outputPath)}");
         return entries;

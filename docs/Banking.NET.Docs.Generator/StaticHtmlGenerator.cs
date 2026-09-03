@@ -1,4 +1,4 @@
-using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Web;
 
 namespace Banking.NET.Docs.Generator;
@@ -101,41 +101,41 @@ public class StaticHtmlGenerator
     {
         var url = $"{_baseUrl}/docs/{entry.Slug}";
         var slugParts = entry.Slug.Split('/');
-        var breadcrumbs = new List<object>
+        var breadcrumbs = new JsonArray
         {
-            new { @type = "ListItem", position = 1, name = "Docs", item = $"{_baseUrl}/" }
+            new JsonObject { ["type"] = "ListItem", ["position"] = 1, ["name"] = "Docs", ["item"] = $"{_baseUrl}/" }
         };
 
         if (slugParts.Length > 1)
         {
-            breadcrumbs.Add(new { @type = "ListItem", position = 2, name = entry.Category, item = $"{_baseUrl}/docs/{slugParts[0]}" });
-            breadcrumbs.Add(new { @type = "ListItem", position = 3, name = entry.Title, item = url });
+            breadcrumbs.Add(new JsonObject { ["type"] = "ListItem", ["position"] = 2, ["name"] = entry.Category, ["item"] = $"{_baseUrl}/docs/{slugParts[0]}" });
+            breadcrumbs.Add(new JsonObject { ["type"] = "ListItem", ["position"] = 3, ["name"] = entry.Title, ["item"] = url });
         }
         else
         {
-            breadcrumbs.Add(new { @type = "ListItem", position = 2, name = entry.Title, item = url });
+            breadcrumbs.Add(new JsonObject { ["type"] = "ListItem", ["position"] = 2, ["name"] = entry.Title, ["item"] = url });
         }
 
-        var graph = new object[]
+        var graph = new JsonArray
         {
-            new
+            new JsonObject
             {
-                @context = "https://schema.org",
-                @type = "TechArticle",
-                headline = entry.Title,
-                description = entry.Description,
-                url,
-                publisher = new { @type = "Organization", name = "Banking.NET" }
+                ["context"] = "https://schema.org",
+                ["type"] = "TechArticle",
+                ["headline"] = entry.Title,
+                ["description"] = entry.Description,
+                ["url"] = url,
+                ["publisher"] = new JsonObject { ["type"] = "Organization", ["name"] = "Banking.NET" }
             },
-            new
+            new JsonObject
             {
-                @context = "https://schema.org",
-                @type = "BreadcrumbList",
-                itemListElement = breadcrumbs
+                ["context"] = "https://schema.org",
+                ["type"] = "BreadcrumbList",
+                ["itemListElement"] = breadcrumbs
             }
         };
 
-        return JsonSerializer.Serialize(graph, new JsonSerializerOptions { WriteIndented = false });
+        return graph.ToJsonString();
     }
 
     private async Task Generate404(string wwwrootPath)

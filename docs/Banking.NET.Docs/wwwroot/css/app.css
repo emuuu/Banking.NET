@@ -329,6 +329,41 @@
     color: var(--cb-primary-dark);
 }
 
+/* Tool panel */
+.tool-panel {
+    border: 2px solid var(--cb-primary);
+    border-radius: 0.5rem;
+    overflow: hidden;
+    margin: 1.5rem 0;
+}
+
+.tool-panel .panel-header {
+    background: var(--cb-gradient);
+    color: white;
+    padding: 0.5rem 1rem;
+    font-weight: 600;
+}
+
+.tool-panel .panel-body {
+    padding: 1rem;
+}
+
+.tool-panel .result-area {
+    margin-top: 1rem;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.tool-panel .result-area pre {
+    background-color: #10202e;
+    color: #e2e8f0;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    font-size: 0.85rem;
+    max-height: 400px;
+    overflow: auto;
+}
+
 /* Loading */
 #blazor-error-ui {
     background: lightyellow;

@@ -28,7 +28,7 @@ public class RestApiDocService : IRestApiDocService
         try
         {
             if (_docs is not null) return;
-            _docs = await _http.GetFromJsonAsync("data/rest-api-docs.json", RestApiDocsJsonContext.Default.RestApiDocsRoot).ConfigureAwait(false);
+            _docs = await _http.GetFromJsonAsync("data/rest-api-docs.json", DocsJsonContext.Default.RestApiDocsRoot).ConfigureAwait(false);
         }
         finally
         {

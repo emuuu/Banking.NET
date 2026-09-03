@@ -9,9 +9,10 @@ description: Why this docs site has no interactive sandbox demo, and how to exer
 
 As described in [Authentication](docs/getting-started/authentication), the Commerzbank sandbox
 gateway and token endpoint do not return `Access-Control-Allow-Origin` for authenticated requests.
-A browser blocks those responses regardless of how the request was made, so a client running inside
-this docs site cannot call the sandbox. The Corporate Payments API is reachable only from
-server-side or desktop applications.
+The sandbox answers an authenticated browser request with HTTP 403 and no CORS headers, and the
+token response likewise carries no `Access-Control-Allow-Origin`; a browser blocks both regardless
+of how the request was made, so a client running inside this docs site cannot call the sandbox. The
+Corporate Payments API is reachable only from server-side or desktop applications.
 
 ## Run the Sample Console
 

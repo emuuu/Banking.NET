@@ -35,7 +35,7 @@ public partial class DocContentService : IDocContentService
 
         try
         {
-            _index = await _http.GetFromJsonAsync<ContentIndex[]>("data/content-index.json").ConfigureAwait(false) ?? [];
+            _index = await _http.GetFromJsonAsync("data/content-index.json", DocsJsonContext.Default.ContentIndexArray).ConfigureAwait(false) ?? [];
         }
         catch (HttpRequestException)
         {

@@ -3,13 +3,14 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using System.Xml.Linq;
 using Banking.NET.Commerzbank;
 
 namespace Banking.NET.Docs.Generator;
 
 /// <summary>Reflects over the Banking.NET assembly and its XML documentation to produce the API reference data consumed by the docs site.</summary>
-public class RestApiDocGenerator
+public partial class RestApiDocGenerator
 {
     private static readonly (string Namespace, string Group)[] NamespaceGroups =
     [
@@ -57,7 +58,7 @@ public class RestApiDocGenerator
 
         var root = new RestApiDocsRoot { Types = types, Enums = enums };
 
-        var json = JsonSerializer.Serialize(root, RestApiDocsJsonContext.Default.RestApiDocsRoot);
+        var json = JsonSerializer.Serialize(root, DocsJsonContext.Default.RestApiDocsRoot);
         await File.WriteAllTextAsync(outputPath, json).ConfigureAwait(false);
         Console.WriteLine($"  Generated {types.Count} types, {enums.Count} enums -> {Path.GetFileName(outputPath)}");
         return root;
@@ -107,17 +108,15 @@ public class RestApiDocGenerator
             if (slugCounts[p.Doc.Slug] > 1) p.Doc.Slug = FullSlug(p.Type);
     }
 
-    private static string SlugBase(string name)
-    {
-        var tick = name.IndexOf('`');
-        return tick < 0 ? name : name[..tick];
-    }
+    [GeneratedRegex(@"`\d+")]
+    private static partial Regex GenericArityRegex();
+
+    private static string SlugBase(string name) => GenericArityRegex().Replace(name, "");
 
     private static string FullSlug(Type type)
     {
         var full = (type.FullName ?? type.Name).Replace('+', '.');
-        var tick = full.IndexOf('`');
-        if (tick >= 0) full = full[..tick];
+        full = GenericArityRegex().Replace(full, "");
         return full.Replace('.', '-');
     }
 
@@ -403,12 +402,18 @@ public class RestApiDocGenerator
     private static readonly Dictionary<string, string> InheritedMemberSummaries = new(StringComparer.Ordinal)
     {
         ["IDisposable.Dispose"] = "Releases the unmanaged resources and, optionally, the managed resources held by this instance.",
+        ["Object.Equals"] = "Determines whether the specified object is equal to the current object.",
+        ["Object.GetHashCode"] = "Serves as the default hash function.",
+        ["Object.ToString"] = "Returns a string that represents the current object.",
     };
 
     private static string DescribeUndocumentedMember(MemberInfo source)
     {
         var key = $"{source.DeclaringType!.Name}.{source.Name}";
-        return InheritedMemberSummaries.GetValueOrDefault(key, $"Implements {source.DeclaringType.Name}.{source.Name}.");
+        if (InheritedMemberSummaries.TryGetValue(key, out var summary)) return summary;
+
+        var verb = source.DeclaringType.IsInterface ? "Implements" : "Overrides";
+        return $"{verb} {source.DeclaringType.Name}.{source.Name}.";
     }
 
     /// <summary>Finds the interface method that <paramref name="impl"/> implements, via the declaring type's interface map.</summary>
