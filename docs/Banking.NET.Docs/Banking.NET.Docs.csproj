@@ -53,7 +53,7 @@
     <Exec Condition="'$(OS)' != 'Windows_NT'"
           Command="sed -i 's|&lt;base href=&quot;/&quot; /&gt;|&lt;base href=&quot;$(DocsBasePath)&quot; /&gt;|' &quot;$(PublishDir)wwwroot/index.html&quot;" />
     <Exec Condition="'$(OS)' == 'Windows_NT'"
-          Command="powershell -NoProfile -Command &quot;(Get-Content -Raw -Encoding utf8 '$(PublishDir)wwwroot/index.html') -replace '&lt;base href=\&quot;/\&quot; /&gt;', '&lt;base href=\&quot;$(DocsBasePath)\&quot; /&gt;' | Set-Content -NoNewline -Encoding utf8 '$(PublishDir)wwwroot/index.html'&quot;" />
+          Command="powershell -NoProfile -Command &quot;$p='$(PublishDir)wwwroot/index.html'; $t=[System.IO.File]::ReadAllText($p); $t=$t.Replace('&lt;base href=\&quot;/\&quot; /&gt;','&lt;base href=\&quot;$(DocsBasePath)\&quot; /&gt;'); [System.IO.File]::WriteAllText($p,$t,(New-Object System.Text.UTF8Encoding $false))&quot;" />
   </Target>
 
 </Project>

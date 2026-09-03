@@ -103,34 +103,34 @@ public class StaticHtmlGenerator
         var slugParts = entry.Slug.Split('/');
         var breadcrumbs = new JsonArray
         {
-            new JsonObject { ["type"] = "ListItem", ["position"] = 1, ["name"] = "Docs", ["item"] = $"{_baseUrl}/" }
+            new JsonObject { ["@type"] = "ListItem", ["position"] = 1, ["name"] = "Docs", ["item"] = $"{_baseUrl}/" }
         };
 
         if (slugParts.Length > 1)
         {
-            breadcrumbs.Add(new JsonObject { ["type"] = "ListItem", ["position"] = 2, ["name"] = entry.Category, ["item"] = $"{_baseUrl}/docs/{slugParts[0]}" });
-            breadcrumbs.Add(new JsonObject { ["type"] = "ListItem", ["position"] = 3, ["name"] = entry.Title, ["item"] = url });
+            breadcrumbs.Add(new JsonObject { ["@type"] = "ListItem", ["position"] = 2, ["name"] = entry.Category, ["item"] = $"{_baseUrl}/docs/{slugParts[0]}" });
+            breadcrumbs.Add(new JsonObject { ["@type"] = "ListItem", ["position"] = 3, ["name"] = entry.Title, ["item"] = url });
         }
         else
         {
-            breadcrumbs.Add(new JsonObject { ["type"] = "ListItem", ["position"] = 2, ["name"] = entry.Title, ["item"] = url });
+            breadcrumbs.Add(new JsonObject { ["@type"] = "ListItem", ["position"] = 2, ["name"] = entry.Title, ["item"] = url });
         }
 
         var graph = new JsonArray
         {
             new JsonObject
             {
-                ["context"] = "https://schema.org",
-                ["type"] = "TechArticle",
+                ["@context"] = "https://schema.org",
+                ["@type"] = "TechArticle",
                 ["headline"] = entry.Title,
                 ["description"] = entry.Description,
                 ["url"] = url,
-                ["publisher"] = new JsonObject { ["type"] = "Organization", ["name"] = "Banking.NET" }
+                ["publisher"] = new JsonObject { ["@type"] = "Organization", ["name"] = "Banking.NET" }
             },
             new JsonObject
             {
-                ["context"] = "https://schema.org",
-                ["type"] = "BreadcrumbList",
+                ["@context"] = "https://schema.org",
+                ["@type"] = "BreadcrumbList",
                 ["itemListElement"] = breadcrumbs
             }
         };
