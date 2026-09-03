@@ -1,14 +1,15 @@
 using System.Text.Json;
-using System.Text.RegularExpressions;
 using System.Web;
 
 namespace Banking.NET.Docs.Generator;
 
 /// <summary>
 /// Pre-renders a static <c>index.html</c> per content page (for SEO and direct/crawler navigation) and the
-/// site's <c>404.html</c> SPA fallback, both carrying the deployment's base path and shared meta tags.
+/// site's <c>404.html</c> SPA fallback, both carrying the deployment's base path and shared meta tags. Does
+/// not touch the checked-in <c>wwwroot/index.html</c> shell - that file stays source-controlled with a
+/// fixed <c>&lt;base href="/" /&gt;</c>, and the deployment base path is applied to the published copy only.
 /// </summary>
-public partial class StaticHtmlGenerator
+public class StaticHtmlGenerator
 {
     private readonly string _baseUrl;
     private readonly string _basePath;
@@ -21,7 +22,7 @@ public partial class StaticHtmlGenerator
         _basePath = basePath;
     }
 
-    /// <summary>Generates one static page per content entry under <c>docs/{slug}/index.html</c>, then <c>404.html</c> and the root page patches.</summary>
+    /// <summary>Generates one static page per content entry under <c>docs/{slug}/index.html</c>, then <c>404.html</c>.</summary>
     /// <param name="wwwrootPath">The Blazor app's wwwroot directory.</param>
     /// <param name="entries">The generated content index entries to render pages for.</param>
     public async Task GenerateAsync(string wwwrootPath, List<ContentIndexEntry> entries)
@@ -40,7 +41,6 @@ public partial class StaticHtmlGenerator
         Console.WriteLine($"  Generated {count} static doc pages");
 
         await Generate404(wwwrootPath).ConfigureAwait(false);
-        await PatchRootPages(wwwrootPath).ConfigureAwait(false);
     }
 
     private string BuildDocPage(ContentIndexEntry entry)
@@ -146,6 +146,14 @@ public partial class StaticHtmlGenerator
             <head>
                 <meta charset="utf-8" />
                 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+                <meta name="description" content="An unofficial .NET client library for the Commerzbank Corporate Payments API: message download, order submission, and ISO 20022 camt/pain reading and writing." />
+                <meta property="og:type" content="website" />
+                <meta property="og:title" content="Banking.NET Docs" />
+                <meta property="og:description" content="An unofficial .NET client library for the Commerzbank Corporate Payments API: message download, order submission, and ISO 20022 camt/pain reading and writing." />
+                <meta property="og:site_name" content="Banking.NET Docs" />
+                <meta name="twitter:card" content="summary" />
+                <meta name="twitter:title" content="Banking.NET Docs" />
+                <meta name="twitter:description" content="An unofficial .NET client library for the Commerzbank Corporate Payments API." />
                 <title>Page Not Found - Banking.NET Docs</title>
                 <base href="{{_basePath}}" />
                 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet"
@@ -167,48 +175,4 @@ public partial class StaticHtmlGenerator
         await File.WriteAllTextAsync(Path.Combine(wwwrootPath, "404.html"), html).ConfigureAwait(false);
         Console.WriteLine("  Generated 404.html");
     }
-
-    /// <summary>
-    /// Normalizes the checked-in <c>index.html</c>/<c>404.html</c> shells to the current base path and,
-    /// the first time, injects the shared Open Graph/Twitter meta tags. Both files are otherwise
-    /// source-controlled, so this only rewrites what generation is actually responsible for.
-    /// </summary>
-    private async Task PatchRootPages(string wwwrootPath)
-    {
-        const string metaTags = """
-
-                <meta name="description" content="An unofficial .NET client library for the Commerzbank Corporate Payments API: message download, order submission, and ISO 20022 camt/pain reading and writing." />
-                <meta property="og:type" content="website" />
-                <meta property="og:title" content="Banking.NET Docs" />
-                <meta property="og:description" content="An unofficial .NET client library for the Commerzbank Corporate Payments API: message download, order submission, and ISO 20022 camt/pain reading and writing." />
-                <meta property="og:site_name" content="Banking.NET Docs" />
-                <meta name="twitter:card" content="summary" />
-                <meta name="twitter:title" content="Banking.NET Docs" />
-                <meta name="twitter:description" content="An unofficial .NET client library for the Commerzbank Corporate Payments API." />
-            """;
-
-        foreach (var fileName in new[] { "index.html", "404.html" })
-        {
-            var filePath = Path.Combine(wwwrootPath, fileName);
-            if (!File.Exists(filePath)) continue;
-
-            var content = await File.ReadAllTextAsync(filePath).ConfigureAwait(false);
-            var original = content;
-
-            content = BaseHrefRegex().Replace(content, $"""<base href="{_basePath}" />""");
-
-            if (!content.Contains("og:title", StringComparison.Ordinal))
-            {
-                const string marker = """<meta name="viewport" content="width=device-width, initial-scale=1.0" />""";
-                content = content.Replace(marker, marker + metaTags);
-                Console.WriteLine($"  Injected meta tags into {fileName}");
-            }
-
-            if (content != original)
-                await File.WriteAllTextAsync(filePath, content).ConfigureAwait(false);
-        }
-    }
-
-    [GeneratedRegex("""<base href="[^"]*" />""")]
-    private static partial Regex BaseHrefRegex();
 }

@@ -35,3 +35,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 **Samples & Documentation**
 - `Banking.NET.Samples.Console`: a sandbox walkthrough covering heartbeat, listing, downloading, camt/pain.002 inspection, message confirmation, and submitting a sample credit transfer.
+- A Blazor WebAssembly documentation site (API reference generated from XML docs, guides, and offline ISO 20022 tools for parsing camt/pain.002 and building pain.001/pain.008), deployed to GitHub Pages.

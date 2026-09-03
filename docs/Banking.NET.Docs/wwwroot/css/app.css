@@ -311,41 +311,6 @@
     filter: drop-shadow(0 4px 12px rgba(18, 50, 74, 0.3));
 }
 
-/* Try It Panel */
-.try-it-panel {
-    border: 2px solid var(--cb-primary);
-    border-radius: 0.5rem;
-    overflow: hidden;
-    margin: 1.5rem 0;
-}
-
-.try-it-panel .panel-header {
-    background: var(--cb-gradient);
-    color: white;
-    padding: 0.5rem 1rem;
-    font-weight: 600;
-}
-
-.try-it-panel .panel-body {
-    padding: 1rem;
-}
-
-.try-it-panel .result-area {
-    margin-top: 1rem;
-    max-height: 500px;
-    overflow-y: auto;
-}
-
-.try-it-panel .result-area pre {
-    background-color: #10202e;
-    color: #e2e8f0;
-    padding: 1rem;
-    border-radius: 0.375rem;
-    font-size: 0.85rem;
-    max-height: 400px;
-    overflow: auto;
-}
-
 /* Service cards */
 .service-card {
     transition: transform 0.2s, box-shadow 0.2s;

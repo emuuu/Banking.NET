@@ -33,26 +33,6 @@
     }
 
     @{
-        var playgroundItems = PlaygroundPages.Where(p => Matches(p.Title)).ToList();
-    }
-    @if (playgroundItems.Count > 0)
-    {
-        <hr class="my-3" />
-        <h6 class="nav-section-title text-uppercase fw-bold mt-3 mb-2">Playground</h6>
-        <ul class="nav flex-column">
-            @foreach (var navPage in playgroundItems)
-            {
-                <li class="nav-item">
-                    <NavLink class="nav-link py-1" href="@navPage.Href"
-                             @onclick="() => OnNavigate.InvokeAsync()">
-                        @navPage.Title
-                    </NavLink>
-                </li>
-            }
-        </ul>
-    }
-
-    @{
         var toolItems = ToolPages.Where(p => Matches(p.Title)).ToList();
     }
     @if (toolItems.Count > 0)
@@ -126,15 +106,6 @@
 
     private string _filter = "";
     private bool _needsScroll;
-
-    private static readonly (string Title, string Href)[] PlaygroundPages =
-    [
-        ("Heartbeat", "playground/heartbeat"),
-        ("Messages", "playground/messages"),
-        ("Download", "playground/download"),
-        ("Confirm", "playground/confirm"),
-        ("Submit", "playground/submit"),
-    ];
 
     private static readonly (string Title, string Href)[] ToolPages =
     [

@@ -3,7 +3,6 @@ using System.Reflection;
 using System.Runtime.CompilerServices;
 using System.Runtime.Serialization;
 using System.Text.Json;
-using System.Text.Json.Serialization;
 using System.Xml.Linq;
 using Banking.NET.Commerzbank;
 
@@ -12,13 +11,6 @@ namespace Banking.NET.Docs.Generator;
 /// <summary>Reflects over the Banking.NET assembly and its XML documentation to produce the API reference data consumed by the docs site.</summary>
 public class RestApiDocGenerator
 {
-    private static readonly JsonSerializerOptions JsonOptions = new()
-    {
-        WriteIndented = true,
-        PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull
-    };
-
     private static readonly (string Namespace, string Group)[] NamespaceGroups =
     [
         ("Banking.NET.Commerzbank.CorporatePayments.Iso20022", "ISO 20022"),
@@ -46,25 +38,26 @@ public class RestApiDocGenerator
             .ThenBy(t => t.Name, StringComparer.Ordinal)
             .ToList();
 
-        var enums = allTypes
-            .Where(t => t.IsEnum)
-            .Select(BuildEnumDoc)
+        var enumPairs = allTypes.Where(t => t.IsEnum).Select(t => (Type: t, Doc: BuildEnumDoc(t))).ToList();
+        var typePairs = allTypes.Where(t => !t.IsEnum).Select(t => (Type: t, Doc: BuildTypeDoc(t))).ToList();
+
+        AssignSlugs(typePairs, enumPairs);
+
+        var enums = enumPairs
+            .Select(p => p.Doc)
             .OrderBy(e => Array.IndexOf(GroupOrder.Values, e.Group))
             .ThenBy(e => e.Name, StringComparer.Ordinal)
             .ToList();
 
-        var types = allTypes
-            .Where(t => !t.IsEnum)
-            .Select(BuildTypeDoc)
+        var types = typePairs
+            .Select(p => p.Doc)
             .OrderBy(t => Array.IndexOf(GroupOrder.Values, t.Group))
             .ThenBy(t => t.Name, StringComparer.Ordinal)
             .ToList();
 
-        AssignSlugs(types, enums);
-
         var root = new RestApiDocsRoot { Types = types, Enums = enums };
 
-        var json = JsonSerializer.Serialize(root, JsonOptions);
+        var json = JsonSerializer.Serialize(root, RestApiDocsJsonContext.Default.RestApiDocsRoot);
         await File.WriteAllTextAsync(outputPath, json).ConfigureAwait(false);
         Console.WriteLine($"  Generated {types.Count} types, {enums.Count} enums -> {Path.GetFileName(outputPath)}");
         return root;
@@ -79,31 +72,53 @@ public class RestApiDocGenerator
 
     /// <summary>
     /// Assigns each type/enum a URL slug. Names are unique today, but two types with the same simple
-    /// name (e.g. a future nested or generic type) would otherwise collide under <c>api/{slug}</c>:
-    /// disambiguate first by the last namespace segment, then, if that still collides, by the full
-    /// namespace.
+    /// name (e.g. a generic type or a nested type) would otherwise collide under <c>api/{slug}</c>:
+    /// disambiguate first by the last namespace segment, then, if that still collides, by the
+    /// reflection type's full name (which, unlike <see cref="Type.Namespace"/>, also includes a
+    /// nested type's enclosing type chain). Generic arity suffixes (<c>`1</c>) are stripped from
+    /// every slug candidate.
     /// </summary>
-    private static void AssignSlugs(List<TypeDoc> types, List<EnumDoc> enums)
+    private static void AssignSlugs(List<(Type Type, TypeDoc Doc)> types, List<(Type Type, EnumDoc Doc)> enums)
     {
-        var nameCounts = types.Select(t => t.Name)
-            .Concat(enums.Select(e => e.Name))
+        var nameCounts = types.Select(p => SlugBase(p.Doc.Name))
+            .Concat(enums.Select(p => SlugBase(p.Doc.Name)))
             .GroupBy(n => n, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
 
-        foreach (var t in types)
-            t.Slug = nameCounts[t.Name] > 1 ? $"{t.Name}-{LastNamespaceSegment(t.Namespace)}" : t.Name;
-        foreach (var e in enums)
-            e.Slug = nameCounts[e.Name] > 1 ? $"{e.Name}-{LastNamespaceSegment(e.Namespace)}" : e.Name;
+        foreach (var p in types)
+        {
+            var baseName = SlugBase(p.Doc.Name);
+            p.Doc.Slug = nameCounts[baseName] > 1 ? $"{baseName}-{LastNamespaceSegment(p.Doc.Namespace)}" : baseName;
+        }
+        foreach (var p in enums)
+        {
+            var baseName = SlugBase(p.Doc.Name);
+            p.Doc.Slug = nameCounts[baseName] > 1 ? $"{baseName}-{LastNamespaceSegment(p.Doc.Namespace)}" : baseName;
+        }
 
-        var slugCounts = types.Select(t => t.Slug)
-            .Concat(enums.Select(e => e.Slug))
+        var slugCounts = types.Select(p => p.Doc.Slug)
+            .Concat(enums.Select(p => p.Doc.Slug))
             .GroupBy(s => s, StringComparer.OrdinalIgnoreCase)
             .ToDictionary(g => g.Key, g => g.Count(), StringComparer.OrdinalIgnoreCase);
 
-        foreach (var t in types)
-            if (slugCounts[t.Slug] > 1) t.Slug = $"{t.Namespace.Replace('.', '-')}-{t.Name}";
-        foreach (var e in enums)
-            if (slugCounts[e.Slug] > 1) e.Slug = $"{e.Namespace.Replace('.', '-')}-{e.Name}";
+        foreach (var p in types)
+            if (slugCounts[p.Doc.Slug] > 1) p.Doc.Slug = FullSlug(p.Type);
+        foreach (var p in enums)
+            if (slugCounts[p.Doc.Slug] > 1) p.Doc.Slug = FullSlug(p.Type);
+    }
+
+    private static string SlugBase(string name)
+    {
+        var tick = name.IndexOf('`');
+        return tick < 0 ? name : name[..tick];
+    }
+
+    private static string FullSlug(Type type)
+    {
+        var full = (type.FullName ?? type.Name).Replace('+', '.');
+        var tick = full.IndexOf('`');
+        if (tick >= 0) full = full[..tick];
+        return full.Replace('.', '-');
     }
 
     private static string LastNamespaceSegment(string ns) => ns.Length == 0 ? "" : ns.Split('.')[^1];
@@ -179,11 +194,15 @@ public class RestApiDocGenerator
 
     private MethodDoc BuildMethodDoc(MethodInfo method)
     {
-        var memberId = ResolveMemberId(method);
+        var (memberId, fallbackSource) = ResolveMemberId(method);
+        var description = _xmlDocs.GetValueOrDefault(memberId, "");
+        if (description.Length == 0 && fallbackSource is not null)
+            description = DescribeUndocumentedMember(fallbackSource);
+
         return new MethodDoc
         {
             Name = FormatMethodName(method),
-            Description = _xmlDocs.GetValueOrDefault(memberId, ""),
+            Description = description,
             ReturnType = FormatTypeName(method.ReturnType),
             IsStatic = method.IsStatic,
             Parameters = method.GetParameters().Select(p => BuildParamDoc(p, memberId)).ToList()
@@ -265,11 +284,16 @@ public class RestApiDocGenerator
             ? prop.Name
             : $"this[{string.Join(", ", indexParams.Select(p => $"{FormatTypeName(p.ParameterType)} {p.Name}"))}]";
 
+        var (memberId, fallbackSource) = ResolvePropertyMemberId(prop);
+        var description = _xmlDocs.GetValueOrDefault(memberId, "");
+        if (description.Length == 0 && fallbackSource is not null)
+            description = DescribeUndocumentedMember(fallbackSource);
+
         return new PropertyDoc
         {
             Name = name,
             Type = FormatPropertyTypeName(prop),
-            Description = _xmlDocs.GetValueOrDefault(ResolvePropertyMemberId(prop), ""),
+            Description = description,
             Accessors = DescribeAccessors(prop),
             Required = IsRequiredMember(prop)
         };
@@ -327,34 +351,40 @@ public class RestApiDocGenerator
     /// <summary>
     /// Resolves the XML doc member ID that actually carries a <c>&lt;summary&gt;</c> for <paramref name="method"/>:
     /// its own ID, or - for an <c>&lt;inheritdoc/&gt;</c> implementation, which the compiler emits without
-    /// resolving - the interface member it implements, falling back to the base method it overrides.
+    /// resolving - the interface member it implements, falling back to the base method it overrides. When
+    /// none of those carry a summary in Banking.NET's own XML doc file (e.g. an interface member inherited
+    /// from the BCL, such as <see cref="IDisposable.Dispose"/>), the inherited member is also returned so
+    /// the caller can fall back to a short description instead of leaving it empty.
     /// </summary>
-    private string ResolveMemberId(MethodInfo method)
+    private (string Id, MemberInfo? FallbackSource) ResolveMemberId(MethodInfo method)
     {
         var ownId = BuildMemberId(method);
-        if (_xmlDocs.ContainsKey(ownId)) return ownId;
+        if (_xmlDocs.ContainsKey(ownId)) return (ownId, null);
 
         var ifaceMethod = FindInterfaceMethod(method);
         if (ifaceMethod is not null)
         {
             var ifaceId = BuildMemberId(ifaceMethod);
-            if (_xmlDocs.ContainsKey(ifaceId)) return ifaceId;
+            if (_xmlDocs.ContainsKey(ifaceId)) return (ifaceId, null);
         }
 
         var baseDefinition = method.GetBaseDefinition();
         if (baseDefinition.DeclaringType != method.DeclaringType)
         {
             var baseId = BuildMemberId(baseDefinition);
-            if (_xmlDocs.ContainsKey(baseId)) return baseId;
+            if (_xmlDocs.ContainsKey(baseId)) return (baseId, null);
         }
 
-        return ownId;
+        MemberInfo? fallbackSource = ifaceMethod is not null
+            ? ifaceMethod
+            : baseDefinition.DeclaringType != method.DeclaringType ? baseDefinition : null;
+        return (ownId, fallbackSource);
     }
 
-    private string ResolvePropertyMemberId(PropertyInfo prop)
+    private (string Id, MemberInfo? FallbackSource) ResolvePropertyMemberId(PropertyInfo prop)
     {
         var ownId = BuildMemberId(prop);
-        if (_xmlDocs.ContainsKey(ownId)) return ownId;
+        if (_xmlDocs.ContainsKey(ownId)) return (ownId, null);
 
         var accessor = prop.GetMethod ?? prop.SetMethod;
         var ifaceMethod = accessor is null ? null : FindInterfaceMethod(accessor);
@@ -363,10 +393,22 @@ public class RestApiDocGenerator
         if (ifaceProp is not null)
         {
             var ifaceId = BuildMemberId(ifaceProp);
-            if (_xmlDocs.ContainsKey(ifaceId)) return ifaceId;
+            if (_xmlDocs.ContainsKey(ifaceId)) return (ifaceId, null);
         }
 
-        return ownId;
+        return (ownId, ifaceProp);
+    }
+
+    /// <summary>Short summaries for common BCL members that public types implement via <c>&lt;inheritdoc/&gt;</c> without a local XML doc entry.</summary>
+    private static readonly Dictionary<string, string> InheritedMemberSummaries = new(StringComparer.Ordinal)
+    {
+        ["IDisposable.Dispose"] = "Releases the unmanaged resources and, optionally, the managed resources held by this instance.",
+    };
+
+    private static string DescribeUndocumentedMember(MemberInfo source)
+    {
+        var key = $"{source.DeclaringType!.Name}.{source.Name}";
+        return InheritedMemberSummaries.GetValueOrDefault(key, $"Implements {source.DeclaringType.Name}.{source.Name}.");
     }
 
     /// <summary>Finds the interface method that <paramref name="impl"/> implements, via the declaring type's interface map.</summary>

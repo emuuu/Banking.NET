@@ -303,9 +303,9 @@ catch (CommerzbankApiException ex)
 
 `MessageConfirmationException` (thrown by `FetchMessagesAsync`) and `Iso20022ValidationException` (thrown by the readers and writers) also derive from `CommerzbankException`.
 
-## Docs & Playground
+## Docs & Tools
 
-The [documentation site](https://emuuu.github.io/Banking.NET/) is generated from the library's XML docs and includes an interactive playground. The playground talks to the sandbox only — production requires mutual TLS, which a browser cannot do — and client credentials entered there stay in the browser's session storage; they are never sent anywhere but the Commerzbank sandbox.
+The [documentation site](https://emuuu.github.io/Banking.NET/) is generated from the library's XML docs and includes offline ISO 20022 tools — parse camt/pain.002 documents and build pain.001/pain.008 orders — that run entirely in the browser without credentials. For an interactive walkthrough against the sandbox, run [`Banking.NET.Samples.Console`](samples/Banking.NET.Samples.Console).
 
 ## Contributing
 

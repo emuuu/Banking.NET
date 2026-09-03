@@ -76,6 +76,6 @@ catch (CommerzbankApiException ex) { /* other API errors, ex.CorrelationId */ }
 
 ## Documentation
 
-For full documentation, guides, and an interactive sandbox playground visit the [project site](https://emuuu.github.io/Banking.NET/).
+For full documentation, guides, and offline ISO 20022 tools, visit the [project site](https://emuuu.github.io/Banking.NET/).
 
 Source code and issue tracker: [GitHub](https://github.com/emuuu/Banking.NET)

@@ -13,12 +13,13 @@ if (!Directory.Exists(wwwrootPath))
     return 1;
 }
 
-var baseUrl = "https://emuuu.github.io/Banking.NET";
+var origin = "https://emuuu.github.io";
 var baseUrlIndex = Array.IndexOf(args, "--base-url");
 if (baseUrlIndex >= 0 && baseUrlIndex + 1 < args.Length)
 {
-    baseUrl = args[baseUrlIndex + 1];
+    origin = args[baseUrlIndex + 1];
 }
+origin = origin.TrimEnd('/');
 
 var basePath = "/";
 var basePathIndex = Array.IndexOf(args, "--base-path");
@@ -26,6 +27,11 @@ if (basePathIndex >= 0 && basePathIndex + 1 < args.Length)
 {
     basePath = args[basePathIndex + 1];
 }
+basePath = NormalizeBasePath(basePath);
+
+// The canonical site root the sitemap, canonical links and JSON-LD point to: the origin combined with
+// the deployment base path, so the two are never maintained as two independently drifting defaults.
+var siteBaseUrl = basePath == "/" ? origin : $"{origin}{basePath.TrimEnd('/')}";
 
 var dataDir = Path.Combine(wwwrootPath, "data");
 Directory.CreateDirectory(dataDir);
@@ -42,12 +48,25 @@ var entries = await contentGenerator.GenerateAsync(
     Path.Combine(dataDir, "content-index.json"));
 
 Console.WriteLine("Generating sitemap and robots.txt...");
-var sitemapGenerator = new SitemapGenerator(baseUrl);
+var sitemapGenerator = new SitemapGenerator(siteBaseUrl);
 await sitemapGenerator.GenerateAsync(wwwrootPath, entries, apiSlugs);
 
 Console.WriteLine("Generating static HTML pages...");
-var staticHtmlGenerator = new StaticHtmlGenerator(baseUrl, basePath);
+var staticHtmlGenerator = new StaticHtmlGenerator(siteBaseUrl, basePath);
 await staticHtmlGenerator.GenerateAsync(wwwrootPath, entries);
 
 Console.WriteLine("Documentation data generated successfully.");
 return 0;
+
+static string NormalizeBasePath(string basePath)
+{
+    if (string.IsNullOrWhiteSpace(basePath)) return "/";
+
+    var normalized = basePath.Trim();
+    if (!normalized.StartsWith('/')) normalized = "/" + normalized;
+    if (!normalized.EndsWith('/')) normalized += "/";
+    while (normalized.Contains("//", StringComparison.Ordinal))
+        normalized = normalized.Replace("//", "/");
+
+    return normalized;
+}

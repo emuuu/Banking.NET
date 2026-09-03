@@ -31,13 +31,13 @@ jobs:
       - name: Publish docs app
         run: dotnet publish docs/Banking.NET.Docs/Banking.NET.Docs.csproj -c Release -o output -p:DocsBasePath=/Banking.NET/
       - name: Verify base href (safeguard)
-        # GenerateDocsData already writes "/Banking.NET/" into every generated page via DocsBasePath;
-        # this only catches a regression where that stopped happening.
+        # GenerateDocsData writes "/Banking.NET/" into every generated page (including 404.html) via
+        # DocsBasePath, and the docs.csproj publish target rewrites the published index.html; this only
+        # catches a regression where either stopped applying the base path.
         run: |
-          sed -i 's|<base href="/" />|<base href="/Banking.NET/" />|g' output/wwwroot/index.html
-          if [ -f output/wwwroot/404.html ]; then
-            sed -i 's|<base href="/" />|<base href="/Banking.NET/" />|g' output/wwwroot/404.html
-          fi
+          for f in output/wwwroot/index.html output/wwwroot/404.html; do
+            grep -q '<base href="/Banking.NET/" />' "$f" || { echo "::error::$f is missing the expected base href."; exit 1; }
+          done
           if grep -rl '<base href="/" />' output/wwwroot/docs 2>/dev/null; then
             echo "::error::Generated doc pages still carry base href=\"/\" - DocsBasePath was not applied."
             exit 1

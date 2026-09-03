@@ -20,7 +20,9 @@
   </ItemGroup>
 
   <PropertyGroup>
-    <BaseUrl Condition="'$(BaseUrl)' == ''">https://emuuu.github.io/Banking.NET</BaseUrl>
+    <!-- The origin the sitemap, canonical links and JSON-LD are built from; the generator combines it
+         with DocsBasePath to form the full site URL, so the two are never maintained independently. -->
+    <BaseUrl Condition="'$(BaseUrl)' == ''">https://emuuu.github.io</BaseUrl>
     <!-- The <base href> written into every generated page. Local dev/tests use "/"; the deploy workflow
          sets "/Banking.NET/" to match the GitHub Pages project path. -->
     <DocsBasePath Condition="'$(DocsBasePath)' == ''">/</DocsBasePath>
@@ -30,15 +32,25 @@
     Runs before static web assets are resolved, not just before Build: the wwwroot/** glob is evaluated
     once at project-evaluation time, so files this target writes into wwwroot never become implicit
     Content items no matter how early within the Build phase it runs. The explicit Content ItemGroup
-    below is what actually gets the generated files into the publish output.
+    below is what actually gets the generated files into the publish output. wwwroot/404.html is fully
+    generated (see StaticHtmlGenerator) and, unlike wwwroot/index.html, is not source-controlled.
   -->
   <Target Name="GenerateDocsData" BeforeTargets="BeforeBuild;ResolveStaticWebAssetsInputs;AssignTargetPaths">
     <Exec Command="dotnet run --project ../Banking.NET.Docs.Generator -- $(MSBuildProjectDirectory)/wwwroot --base-url $(BaseUrl) --base-path $(DocsBasePath)" />
     <ItemGroup>
-      <Content Include="wwwroot/data/**;wwwroot/docs/**;wwwroot/sitemap.xml;wwwroot/robots.txt"
+      <Content Include="wwwroot/data/**;wwwroot/docs/**;wwwroot/sitemap.xml;wwwroot/robots.txt;wwwroot/404.html"
                Exclude="@(Content)"
                CopyToPublishDirectory="PreserveNewest" />
     </ItemGroup>
+  </Target>
+
+  <!--
+    wwwroot/index.html stays source-controlled with a fixed <base href="/" /> (see
+    StaticHtmlGenerator - it no longer rewrites checked-in files), so the deployment base path is
+    applied to the published copy only, after the static web assets have been copied to PublishDir.
+  -->
+  <Target Name="RewritePublishedIndexBasePath" AfterTargets="Publish" Condition="'$(DocsBasePath)' != '/'">
+    <Exec Command="sed -i 's|&lt;base href=&quot;/&quot; /&gt;|&lt;base href=&quot;$(DocsBasePath)&quot; /&gt;|' &quot;$(PublishDir)wwwroot/index.html&quot;" />
   </Target>
 
 </Project>

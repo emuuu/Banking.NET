@@ -80,6 +80,9 @@ but again without `Access-Control-Allow-Origin`, so a browser cannot read the to
 request succeeded server-side. In practice, the Corporate Payments API can only be used from
 server-side or desktop applications — not directly from a browser.
 
+See [Trying the API](docs/getting-started/trying-the-api) for how to exercise the client without a
+browser, and for the offline ISO 20022 tools this docs site offers instead.
+
 ## Production: Mutual TLS Required
 
 Sandbox authentication needs nothing beyond the client ID and secret. Production additionally
@@ -101,4 +104,5 @@ Configure the certificate on `CommerzbankOptions` (object, PKCS#12 file, or PEM 
 
 - [Configuration](docs/getting-started/configuration) — All `CommerzbankOptions` properties
 - [Quick Start](docs/getting-started/quick-start) — Register the client and make your first call
+- [Trying the API](docs/getting-started/trying-the-api) — Running the client outside a browser
 - [Error Handling](docs/guides/error-handling) — How authentication failures surface as exceptions
