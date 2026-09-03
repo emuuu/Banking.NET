@@ -309,6 +309,33 @@ public class CamtReaderTests
     }
 
     [Fact]
+    public void Read_RootWithoutRecognizedChildCamt052Namespace_ThrowsValidationExceptionWithAcctRptPath()
+    {
+        const string xml = "<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:camt.052.001.08\"><SomethingElse/></Document>";
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => CamtReader.Read(xml));
+        exception.Path.ShouldBe("Document/BkToCstmrAcctRpt");
+    }
+
+    [Fact]
+    public void Read_RootWithoutRecognizedChildCamt054Namespace_ThrowsValidationExceptionWithNtfctnPath()
+    {
+        const string xml = "<Document xmlns=\"urn:iso:std:iso:20022:tech:xsd:camt.054.001.08\"><SomethingElse/></Document>";
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => CamtReader.Read(xml));
+        exception.Path.ShouldBe("Document/BkToCstmrDbtCdtNtfctn");
+    }
+
+    [Fact]
+    public void Read_RootWithoutRecognizedChildNoNamespace_ThrowsValidationExceptionWithDocumentPath()
+    {
+        const string xml = "<Document><SomethingElse/></Document>";
+
+        var exception = Should.Throw<Iso20022ValidationException>(() => CamtReader.Read(xml));
+        exception.Path.ShouldBe("Document");
+    }
+
+    [Fact]
     public void Read_RootNotNamedDocument_ThrowsValidationExceptionWithDocumentPath()
     {
         const string xml = "<Foo xmlns=\"urn:iso:std:iso:20022:tech:xsd:camt.053.001.08\"><BkToCstmrStmt><GrpHdr><MsgId>MSGID-1</MsgId></GrpHdr></BkToCstmrStmt></Foo>";

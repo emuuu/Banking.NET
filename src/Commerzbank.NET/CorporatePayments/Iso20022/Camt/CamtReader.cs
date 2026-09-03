@@ -27,7 +27,7 @@ public static class CamtReader
             ? (StatementKind.Notification, ntfctn, "Ntfctn")
             : throw new Iso20022ValidationException(
                 $"Expected root child 'BkToCstmrAcctRpt', 'BkToCstmrStmt' or 'BkToCstmrDbtCdtNtfctn', but found '{root.Elements().FirstOrDefault()?.Name.LocalName ?? "none"}'.",
-                "Document/BkToCstmrStmt");
+                MissingMessageElementPath(document));
 
         return new BankToCustomerMessage
         {
@@ -37,6 +37,15 @@ public static class CamtReader
             Source = message,
         };
     }
+
+    /// <summary>Determines the message-element path to report when the expected bank-to-customer child is missing, based on the message type identified from the document's root namespace.</summary>
+    private static string MissingMessageElementPath(XDocument document) => Iso20022Document.Identify(document).Type switch
+    {
+        Iso20022MessageType.Camt052 => "Document/BkToCstmrAcctRpt",
+        Iso20022MessageType.Camt053 => "Document/BkToCstmrStmt",
+        Iso20022MessageType.Camt054 => "Document/BkToCstmrDbtCdtNtfctn",
+        _ => "Document",
+    };
 
     /// <summary>Reads a bank-to-customer message from a stream.</summary>
     /// <param name="xml">The stream to read the document from.</param>

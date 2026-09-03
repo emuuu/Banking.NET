@@ -308,7 +308,8 @@ public sealed class CorporatePaymentsClient : ICorporatePaymentsClient
         }
 
         await CommerzbankErrorHandler.EnsureSuccessAsync(response, cancellationToken).ConfigureAwait(false);
-        throw new CommerzbankApiException($"Commerzbank API returned an unexpected successful status {(int)response.StatusCode} for message '{messageId}'.", response.StatusCode, CommerzbankErrorHandler.GetCorrelationId(response), null);
+        var rawResponse = await response.Content.ReadAsStringAsync(cancellationToken).ConfigureAwait(false);
+        throw new CommerzbankApiException($"Commerzbank API returned an unexpected successful status {(int)response.StatusCode} for message '{messageId}'.", response.StatusCode, CommerzbankErrorHandler.GetCorrelationId(response), string.IsNullOrEmpty(rawResponse) ? null : rawResponse);
     }
 
     private static void ValidateSubmittableOrderType(OrderType orderType)

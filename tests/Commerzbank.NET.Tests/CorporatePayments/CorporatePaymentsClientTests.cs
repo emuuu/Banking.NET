@@ -227,6 +227,21 @@ public class CorporatePaymentsClientTests
     }
 
     [Fact]
+    public async Task DownloadFragmentAsync_UnexpectedSuccessStatus_ThrowsWithStatusCodeCorrelationIdAndRawResponse()
+    {
+        var response = new HttpResponseMessage(HttpStatusCode.Accepted) { Content = new StringContent("unexpected body") };
+        response.Headers.Add("X-CorrelationID", "corr-202");
+        var handler = new MockHttpMessageHandler(response);
+        var client = CreateClient(handler);
+
+        var exception = await Should.ThrowAsync<CommerzbankApiException>(() => client.DownloadFragmentAsync("msg-1", 0));
+
+        exception.StatusCode.ShouldBe(HttpStatusCode.Accepted);
+        exception.CorrelationId.ShouldBe("corr-202");
+        exception.RawResponse.ShouldBe("unexpected body");
+    }
+
+    [Fact]
     public async Task DownloadMessageAsync_413ThenIndexZero416_ThrowsWithCorrelationIdAndRawResponse()
     {
         var probeResponse = new HttpResponseMessage(HttpStatusCode.RequestEntityTooLarge);
