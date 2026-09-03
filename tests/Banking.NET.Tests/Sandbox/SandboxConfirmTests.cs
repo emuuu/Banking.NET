@@ -10,12 +10,13 @@ namespace Banking.NET.Tests.Sandbox;
 /// redelivery of bank-generated messages, so they only run when explicitly opted into via
 /// <c>COMMERZBANK_SANDBOX_ALLOW_CONFIRM</c> (default: skipped, in CI and locally).
 /// </summary>
-public sealed class SandboxConfirmTests(SandboxFixture fixture, ITestOutputHelper output) : IClassFixture<SandboxFixture>
+[Collection("Sandbox")]
+public sealed class SandboxConfirmTests(SandboxFixture fixture, ITestOutputHelper output)
 {
     private const string SkipReason = "Set COMMERZBANK_SANDBOX_ALLOW_CONFIRM=1 (in addition to the sandbox credentials) to run tests that confirm sandbox messages.";
 
     [Fact(SkipUnless = nameof(SandboxCredentials.ConfirmAllowed), SkipType = typeof(SandboxCredentials), Skip = SkipReason)]
-    public async Task FetchMessagesAsync_HacWithBreakAfterFirst_Sandbox_LeavesMessageUnconfirmed()
+    public async Task FetchMessagesAsync_HacWithBreakAfterFirst_LeavesMessageUnconfirmed()
     {
         string? firstMessageId = null;
         await foreach (var message in fixture.Client.FetchMessagesAsync(OrderType.HAC, confirm: true))
@@ -34,8 +35,10 @@ public sealed class SandboxConfirmTests(SandboxFixture fixture, ITestOutputHelpe
         stillListed.ShouldBeTrue();
     }
 
+    // The concrete exception type and status code the gateway returns for this case have not yet
+    // been observed against the sandbox, so this still logs rather than asserts a specific outcome.
     [Fact(SkipUnless = nameof(SandboxCredentials.ConfirmAllowed), SkipType = typeof(SandboxCredentials), Skip = SkipReason)]
-    public async Task ConfirmMessageAsync_UnknownMessageId_Sandbox_LogsObservedException()
+    public async Task ConfirmMessageAsync_UnknownMessageId_LogsObservedException()
     {
         try
         {

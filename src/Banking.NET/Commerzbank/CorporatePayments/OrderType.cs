@@ -76,8 +76,8 @@ public readonly struct OrderType : IEquatable<OrderType>
     /// <summary>Debit and credit notification.</summary>
     public static OrderType C54 { get; } = new("C54", OrderDirection.Download, "camt.054", ["camt.054.001.08"], "Debit and credit notification");
 
-    /// <summary>Bank services billing statement.</summary>
-    public static OrderType C86 { get; } = new("C86", OrderDirection.Download, "camt.086", ["camt.086.001.02"], "Bank services billing statement");
+    /// <summary>Bank services billing statement. The bank documents schema version <c>camt.086.001.02</c>; the sandbox's mock message was observed to identify as <c>camt.086.001.01</c>.</summary>
+    public static OrderType C86 { get; } = new("C86", OrderDirection.Download, "camt.086", ["camt.086.001.02", "camt.086.001.01"], "Bank services billing statement");
 
     /// <summary>Customer acknowledgement (payment status report).</summary>
     public static OrderType HAC { get; } = new("HAC", OrderDirection.Download, "pain.002", ["pain.002.001.10", "pain.002.001.03"], "Customer acknowledgement (payment status report)");

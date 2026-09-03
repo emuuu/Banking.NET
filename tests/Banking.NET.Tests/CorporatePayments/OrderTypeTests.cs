@@ -13,7 +13,7 @@ public class OrderTypeTests
             { OrderType.C52, "C52", OrderDirection.Download, "camt.052", ["camt.052.001.08", "camt.052.001.02"], "Intraday account report" },
             { OrderType.C53, "C53", OrderDirection.Download, "camt.053", ["camt.053.001.08", "camt.053.001.02"], "Account statement" },
             { OrderType.C54, "C54", OrderDirection.Download, "camt.054", ["camt.054.001.08"], "Debit and credit notification" },
-            { OrderType.C86, "C86", OrderDirection.Download, "camt.086", ["camt.086.001.02"], "Bank services billing statement" },
+            { OrderType.C86, "C86", OrderDirection.Download, "camt.086", ["camt.086.001.02", "camt.086.001.01"], "Bank services billing statement" },
             { OrderType.HAC, "HAC", OrderDirection.Download, "pain.002", ["pain.002.001.10", "pain.002.001.03"], "Customer acknowledgement (payment status report)" },
             { OrderType.AXS, "AXS", OrderDirection.Download, "pain.002", ["pain.002.001.10"], "Payment status report for cross-border credit transfers" },
             { OrderType.CUZ, "CUZ", OrderDirection.Download, "pain.002", ["pain.002.001.10"], "Payment status report for urgent credit transfers" },

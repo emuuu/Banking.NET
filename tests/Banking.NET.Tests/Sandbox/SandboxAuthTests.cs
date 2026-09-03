@@ -6,19 +6,20 @@ using Xunit;
 namespace Banking.NET.Tests.Sandbox;
 
 /// <summary>Verifies OAuth token acquisition and caching, and basic connectivity, against the live sandbox.</summary>
-public sealed class SandboxAuthTests(SandboxFixture fixture, ITestOutputHelper output) : IClassFixture<SandboxFixture>
+[Collection("Sandbox")]
+public sealed class SandboxAuthTests(SandboxFixture fixture, ITestOutputHelper output)
 {
     private const string SkipReason = "Set COMMERZBANK_SANDBOX_CLIENT_ID and COMMERZBANK_SANDBOX_CLIENT_SECRET to run sandbox tests.";
 
     [Fact(SkipUnless = nameof(SandboxCredentials.Available), SkipType = typeof(SandboxCredentials), Skip = SkipReason)]
-    public async Task HeartbeatAsync_Sandbox_Succeeds()
+    public async Task HeartbeatAsync_ValidCredentials_Succeeds()
     {
         await fixture.Client.HeartbeatAsync();
         output.WriteLine("Heartbeat succeeded.");
     }
 
     [Fact(SkipUnless = nameof(SandboxCredentials.Available), SkipType = typeof(SandboxCredentials), Skip = SkipReason)]
-    public async Task GetAccessTokenAsync_Sandbox_ReturnsTokenWithFutureExpiry()
+    public async Task GetAccessTokenAsync_ClientCredentials_ReturnsTokenWithFutureExpiry()
     {
         var tokenProvider = (ClientCredentialsTokenProvider)fixture.Services.GetRequiredService<IAccessTokenProvider>();
         await tokenProvider.GetAccessTokenAsync();
@@ -30,14 +31,16 @@ public sealed class SandboxAuthTests(SandboxFixture fixture, ITestOutputHelper o
     }
 
     [Fact(SkipUnless = nameof(SandboxCredentials.Available), SkipType = typeof(SandboxCredentials), Skip = SkipReason)]
-    public async Task GetAccessTokenAsync_Sandbox_ReturnsCachedTokenWithinValidity()
+    public async Task GetAccessTokenAsync_CalledTwiceWithinValidity_ReturnsCachedToken()
     {
         var tokenProvider = (ClientCredentialsTokenProvider)fixture.Services.GetRequiredService<IAccessTokenProvider>();
 
         var first = await tokenProvider.GetAccessTokenAsync();
         var second = await tokenProvider.GetAccessTokenAsync();
 
-        second.ShouldBe(first);
+        // Compared via string.Equals rather than Shouldly's ShouldBe(first): a failure there
+        // would print both raw access token values into the (public) test log.
+        string.Equals(second, first, StringComparison.Ordinal).ShouldBeTrue();
         output.WriteLine("Second call within validity returned the cached token.");
     }
 }

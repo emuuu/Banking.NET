@@ -35,3 +35,9 @@ public sealed class SandboxFixture : IAsyncLifetime
         return ValueTask.CompletedTask;
     }
 }
+
+/// <summary>Collection definition that serializes all sandbox tests against each other — they share one OAuth token per run and repeated concurrent downloads of the same large message were observed to trigger transient sandbox errors.</summary>
+[CollectionDefinition("Sandbox")]
+public sealed class SandboxCollection : ICollectionFixture<SandboxFixture>
+{
+}

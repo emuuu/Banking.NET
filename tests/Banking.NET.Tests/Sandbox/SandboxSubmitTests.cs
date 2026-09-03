@@ -1,19 +1,19 @@
 using System.Net;
 using Banking.NET.Commerzbank.CorporatePayments;
 using Banking.NET.Commerzbank.CorporatePayments.Iso20022;
-using Banking.NET.Commerzbank.Exceptions;
 using Shouldly;
 using Xunit;
 
 namespace Banking.NET.Tests.Sandbox;
 
-/// <summary>Verifies order submission (pain.001, pain.008) against the live sandbox. Never confirms messages.</summary>
-public sealed class SandboxSubmitTests(SandboxFixture fixture, ITestOutputHelper output) : IClassFixture<SandboxFixture>
+/// <summary>Verifies order submission (pain.001, pain.008) against the live sandbox. Each submission leaves a mock order behind in the sandbox — not a real booking — and none of these tests confirm messages.</summary>
+[Collection("Sandbox")]
+public sealed class SandboxSubmitTests(SandboxFixture fixture, ITestOutputHelper output)
 {
     private const string SkipReason = "Set COMMERZBANK_SANDBOX_CLIENT_ID and COMMERZBANK_SANDBOX_CLIENT_SECRET to run sandbox tests.";
 
     [Fact(SkipUnless = nameof(SandboxCredentials.Available), SkipType = typeof(SandboxCredentials), Skip = SkipReason)]
-    public async Task SubmitOrderAsync_CctBytes_Sandbox_ReturnsCreated()
+    public async Task SubmitOrderAsync_CctBytes_ReturnsCreated()
     {
         var bytes = Pain001Writer.WriteToBytes(BuildCreditTransferInitiation(NewTestMessageId()), Pain001Version.V09);
 
@@ -24,7 +24,7 @@ public sealed class SandboxSubmitTests(SandboxFixture fixture, ITestOutputHelper
     }
 
     [Fact(SkipUnless = nameof(SandboxCredentials.Available), SkipType = typeof(SandboxCredentials), Skip = SkipReason)]
-    public async Task SubmitOrderAsync_CctBytesCompressed_Sandbox_ReturnsCreated()
+    public async Task SubmitOrderAsync_CctBytesCompressed_ReturnsCreated()
     {
         var bytes = Pain001Writer.WriteToBytes(BuildCreditTransferInitiation(NewTestMessageId()), Pain001Version.V09);
 
@@ -35,7 +35,7 @@ public sealed class SandboxSubmitTests(SandboxFixture fixture, ITestOutputHelper
     }
 
     [Fact(SkipUnless = nameof(SandboxCredentials.Available), SkipType = typeof(SandboxCredentials), Skip = SkipReason)]
-    public async Task SubmitOrderAsync_CctString_Sandbox_ReturnsCreated()
+    public async Task SubmitOrderAsync_CctString_ReturnsCreated()
     {
         var xml = Pain001Writer.WriteToString(BuildCreditTransferInitiation(NewTestMessageId()), Pain001Version.V09);
 
@@ -46,7 +46,7 @@ public sealed class SandboxSubmitTests(SandboxFixture fixture, ITestOutputHelper
     }
 
     [Fact(SkipUnless = nameof(SandboxCredentials.Available), SkipType = typeof(SandboxCredentials), Skip = SkipReason)]
-    public async Task SubmitOrderAsync_CctStream_Sandbox_ReturnsCreated()
+    public async Task SubmitOrderAsync_CctStream_ReturnsCreated()
     {
         var bytes = Pain001Writer.WriteToBytes(BuildCreditTransferInitiation(NewTestMessageId()), Pain001Version.V09);
         using var stream = new MemoryStream(bytes);
@@ -58,48 +58,45 @@ public sealed class SandboxSubmitTests(SandboxFixture fixture, ITestOutputHelper
     }
 
     [Fact(SkipUnless = nameof(SandboxCredentials.Available), SkipType = typeof(SandboxCredentials), Skip = SkipReason)]
-    public async Task SubmitOrderAsync_StructurallyInvalidXml_Sandbox_LogsObservedResult()
+    public async Task SubmitOrderAsync_StructurallyInvalidXml_ReturnsCreated()
     {
-        // Deviation from the assumption that the gateway rejects non-ISO-20022 content: the sandbox
-        // accepts a bare `<Document/>` root and returns 201, i.e. it does not validate the submitted
-        // XML structurally against the order type's schema. Logged here for the report; if the
-        // gateway ever does reject it, that is logged too rather than asserted away.
-        try
-        {
-            var result = await fixture.Client.SubmitOrderAsync(OrderType.CCT, "<Document/>");
-            output.WriteLine($"SubmitOrderAsync(structurally invalid XML): status={(int)result.StatusCode}, hasLocation={result.Location is not null}, hasBody={result.RawResponse is not null}.");
-        }
-        catch (CommerzbankException ex)
-        {
-            output.WriteLine($"SubmitOrderAsync(structurally invalid XML) rejected: exception={ex.GetType().Name}, status={(int?)ex.StatusCode}, correlationId present={!string.IsNullOrEmpty(ex.CorrelationId)}.");
-        }
+        // The sandbox does not validate the submitted body structurally against the order type's
+        // schema: a bare `<Document/>` root is accepted like a well-formed pain.001 message.
+        var result = await fixture.Client.SubmitOrderAsync(OrderType.CCT, "<Document/>");
+
+        result.StatusCode.ShouldBe(HttpStatusCode.Created);
+        output.WriteLine($"SubmitOrderAsync(structurally invalid XML): status={(int)result.StatusCode}, hasLocation={result.Location is not null}, hasBody={result.RawResponse is not null}.");
     }
 
     [Fact(SkipUnless = nameof(SandboxCredentials.Available), SkipType = typeof(SandboxCredentials), Skip = SkipReason)]
-    public async Task SubmitOrderAsync_Cdd_Sandbox_LogsObservedResult()
+    public async Task SubmitOrderAsync_Cdd_ReturnsCreated()
     {
+        // The sandbox accepts CDD (SEPA direct debit CORE) submissions like any other order type;
+        // it does not enforce mandate or scheme-specific business rules on the mock endpoint.
         var bytes = Pain008Writer.WriteToBytes(BuildDirectDebitInitiation(NewTestMessageId()), Pain008Version.V08);
 
-        try
-        {
-            var result = await fixture.Client.SubmitOrderAsync(OrderType.CDD, bytes);
-            output.WriteLine($"SubmitOrderAsync(CDD): status={(int)result.StatusCode}, hasLocation={result.Location is not null}, hasBody={result.RawResponse is not null}.");
-            result.StatusCode.ShouldBe(HttpStatusCode.Created);
-        }
-        catch (CommerzbankException ex)
-        {
-            output.WriteLine($"SubmitOrderAsync(CDD) rejected: exception={ex.GetType().Name}, status={(int?)ex.StatusCode}, correlationId present={!string.IsNullOrEmpty(ex.CorrelationId)}.");
-            ex.CorrelationId.ShouldNotBeNullOrEmpty();
-        }
+        var result = await fixture.Client.SubmitOrderAsync(OrderType.CDD, bytes);
+
+        result.StatusCode.ShouldBe(HttpStatusCode.Created);
+        output.WriteLine($"SubmitOrderAsync(CDD): status={(int)result.StatusCode}, hasLocation={result.Location is not null}, hasBody={result.RawResponse is not null}.");
     }
 
-    // "COMMERZBANK-NET-TEST-" (21 chars) + a 14-digit yyyyMMddHHmmss timestamp is exactly 35
-    // characters, the ISO 20022 Max35Text limit enforced by PainValidator for these identifiers.
-    private static string NewTestMessageId() => "COMMERZBANK-NET-TEST-" + DateTime.UtcNow.ToString("yyyyMMddHHmmss");
+    // "BANKING-NET-TEST-" (17 chars) + a millisecond-resolution yyyyMMddHHmmssfff timestamp (17
+    // chars) + a random alphanumeric character is exactly 35, the ISO 20022 Max35Text limit
+    // enforced by PainValidator for these identifiers; the millisecond resolution plus random
+    // suffix keep message IDs unique across submissions within the same test run.
+    private static string NewTestMessageId() =>
+        $"BANKING-NET-TEST-{DateTime.UtcNow:yyyyMMddHHmmssfff}{RandomSuffixChar()}";
+
+    private static char RandomSuffixChar()
+    {
+        const string alphabet = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        return alphabet[Random.Shared.Next(alphabet.Length)];
+    }
 
     private static CreditTransferInitiation BuildCreditTransferInitiation(string messageId)
     {
-        var timestamp = messageId[^14..];
+        var suffix = messageId[^18..];
         return new CreditTransferInitiation
         {
             MessageId = messageId,
@@ -108,7 +105,7 @@ public sealed class SandboxSubmitTests(SandboxFixture fixture, ITestOutputHelper
             [
                 new CreditTransferPaymentInformation
                 {
-                    PaymentInformationId = "PMTINF-" + timestamp,
+                    PaymentInformationId = "PMTINF-" + suffix,
                     RequestedExecutionDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(1)),
                     Debtor = new PartyIdentification { Name = "Example Debtor GmbH" },
                     DebtorAccount = new AccountIdentification { Iban = "DE89370400440532013000" },
@@ -116,7 +113,7 @@ public sealed class SandboxSubmitTests(SandboxFixture fixture, ITestOutputHelper
                     [
                         new CreditTransferTransaction
                         {
-                            EndToEndId = "E2E-" + timestamp,
+                            EndToEndId = "E2E-" + suffix,
                             Amount = new Money(1.00m, "EUR"),
                             Creditor = new PartyIdentification { Name = "Example Creditor Ltd" },
                             CreditorAccount = new AccountIdentification { Iban = "DE02120300000000202051" },
@@ -129,7 +126,7 @@ public sealed class SandboxSubmitTests(SandboxFixture fixture, ITestOutputHelper
 
     private static DirectDebitInitiation BuildDirectDebitInitiation(string messageId)
     {
-        var timestamp = messageId[^14..];
+        var suffix = messageId[^18..];
         return new DirectDebitInitiation
         {
             MessageId = messageId,
@@ -138,7 +135,7 @@ public sealed class SandboxSubmitTests(SandboxFixture fixture, ITestOutputHelper
             [
                 new DirectDebitPaymentInformation
                 {
-                    PaymentInformationId = "PMTINF-" + timestamp,
+                    PaymentInformationId = "PMTINF-" + suffix,
                     Scheme = DirectDebitScheme.Core,
                     SequenceType = SequenceType.Recurring,
                     RequestedCollectionDate = DateOnly.FromDateTime(DateTime.UtcNow.AddDays(5)),
@@ -149,9 +146,9 @@ public sealed class SandboxSubmitTests(SandboxFixture fixture, ITestOutputHelper
                     [
                         new DirectDebitTransaction
                         {
-                            EndToEndId = "E2E-" + timestamp,
+                            EndToEndId = "E2E-" + suffix,
                             Amount = new Money(1.00m, "EUR"),
-                            Mandate = new MandateInformation { MandateId = "MANDATE-" + timestamp, DateOfSignature = new DateOnly(2026, 1, 10) },
+                            Mandate = new MandateInformation { MandateId = "MANDATE-" + suffix, DateOfSignature = new DateOnly(2026, 1, 10) },
                             Debtor = new PartyIdentification { Name = "Example Debtor GmbH" },
                             DebtorAccount = new AccountIdentification { Iban = "DE89370400440532013000" },
                         },

@@ -261,6 +261,45 @@ public class Camt086ReaderTests
     }
 
     [Fact]
+    public void Read_Camt086001_01Namespace_ParsesUsingLocalNames()
+    {
+        // The gateway's C86 mock message identifies as camt.086.001.01 rather than the documented
+        // camt.086.001.02; the reader matches elements by local name (D12) regardless of namespace,
+        // so both schema versions parse through the same code path.
+        const string xml = """
+            <Document xmlns="urn:iso:std:iso:20022:tech:xsd:camt.086.001.01">
+              <BkSvcsBllgStmt>
+                <RptHdr>
+                  <RptId>BILLRPT-1</RptId>
+                </RptHdr>
+                <BllgStmtGrp>
+                  <GrpId>BILLGRP-1</GrpId>
+                  <BllgStmt>
+                    <StmtId>BILLSTMT-1</StmtId>
+                    <AcctChrtcs>
+                      <CshAcct>
+                        <Id>
+                          <IBAN>DE89370400440532013000</IBAN>
+                        </Id>
+                      </CshAcct>
+                    </AcctChrtcs>
+                  </BllgStmt>
+                </BllgStmtGrp>
+              </BkSvcsBllgStmt>
+            </Document>
+            """;
+
+        var message = Camt086Reader.Read(xml);
+
+        message.Identifier.Type.ShouldBe(Iso20022MessageType.Camt086);
+        message.Identifier.Identifier.ShouldBe("camt.086.001.01");
+        var statement = message.Groups[0].Statements[0];
+        statement.StatementId.ShouldBe("BILLSTMT-1");
+        statement.Account.ShouldNotBeNull();
+        statement.Account!.Iban.ShouldBe("DE89370400440532013000");
+    }
+
+    [Fact]
     public void Read_StreamAndString_ProduceEquivalentResults()
     {
         var xml = SampleXml.Load("camt.086.001.02-sample.xml");

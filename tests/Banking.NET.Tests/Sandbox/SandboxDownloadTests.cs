@@ -10,12 +10,13 @@ using Xunit;
 namespace Banking.NET.Tests.Sandbox;
 
 /// <summary>Verifies message download, fragmentation and reader compatibility against the live sandbox.</summary>
-public sealed class SandboxDownloadTests(SandboxFixture fixture, ITestOutputHelper output) : IClassFixture<SandboxFixture>
+[Collection("Sandbox")]
+public sealed class SandboxDownloadTests(SandboxFixture fixture, ITestOutputHelper output)
 {
     private const string SkipReason = "Set COMMERZBANK_SANDBOX_CLIENT_ID and COMMERZBANK_SANDBOX_CLIENT_SECRET to run sandbox tests.";
 
     [Fact(SkipUnless = nameof(SandboxCredentials.Available), SkipType = typeof(SandboxCredentials), Skip = SkipReason)]
-    public async Task DownloadMessageAsync_SingleFragmentAccountMessage_Sandbox_MatchesListedSizeAndParses()
+    public async Task DownloadMessageAsync_SingleFragmentAccountMessage_MatchesListedSizeAndParses()
     {
         var messages = await fixture.Client.ListMessagesAsync();
         var info = messages
@@ -46,11 +47,17 @@ public sealed class SandboxDownloadTests(SandboxFixture fixture, ITestOutputHelp
     }
 
     [Fact(SkipUnless = nameof(SandboxCredentials.Available), SkipType = typeof(SandboxCredentials), Skip = SkipReason)]
-    public async Task DownloadMessageAsync_MultiFragmentMessage_Sandbox_ConcatenatesFragmentsConsistently()
+    public async Task DownloadMessageAsync_MultiFragmentCamtMessage_ConcatenatesFragmentsConsistently()
     {
-        var messages = await fixture.Client.ListMessagesAsync();
-        var info = messages.Where(m => m.Fragments > 1).OrderBy(m => m.Size).FirstOrDefault();
-        Assert.SkipWhen(info is null, "No multi-fragment message listed in the sandbox.");
+        using var timeout = new CancellationTokenSource(TimeSpan.FromMinutes(5));
+        var cancellationToken = timeout.Token;
+
+        var messages = await WithSandboxRetryAsync(() => fixture.Client.ListMessagesAsync(cancellationToken: cancellationToken));
+        var info = messages
+            .Where(m => m.Fragments > 1 && (m.OrderType == OrderType.C52 || m.OrderType == OrderType.C53 || m.OrderType == OrderType.C54))
+            .OrderBy(m => m.Size)
+            .FirstOrDefault();
+        Assert.SkipWhen(info is null, "No multi-fragment camt.052/053/054 message listed in the sandbox.");
 
         var stopwatch = Stopwatch.StartNew();
 
@@ -58,7 +65,7 @@ public sealed class SandboxDownloadTests(SandboxFixture fixture, ITestOutputHelp
         using var buffer = new MemoryStream();
         for (var i = 0; i < info!.Fragments; i++)
         {
-            var fragment = await WithSandboxRetryAsync(() => fixture.Client.DownloadFragmentAsync(info.MessageId, i));
+            var fragment = await WithSandboxRetryAsync(() => fixture.Client.DownloadFragmentAsync(info.MessageId, i, cancellationToken));
             partialFlags.Add(fragment.IsPartial);
             buffer.Write(fragment.Content);
         }
@@ -71,11 +78,16 @@ public sealed class SandboxDownloadTests(SandboxFixture fixture, ITestOutputHelp
         // and only signals the end via 416 on the index beyond it (asserted below).
         partialFlags.ShouldAllBe(isPartial => isPartial);
 
-        var beyondLast = await Should.ThrowAsync<CommerzbankApiException>(() => fixture.Client.DownloadFragmentAsync(info.MessageId, info.Fragments));
+        var beyondLast = await WithSandboxRetryAsync(async () =>
+        {
+            var exception = await Should.ThrowAsync<CommerzbankApiException>(() =>
+                fixture.Client.DownloadFragmentAsync(info.MessageId, info.Fragments, cancellationToken));
+            return exception.StatusCode is >= HttpStatusCode.InternalServerError ? throw exception : exception;
+        });
         beyondLast.StatusCode.ShouldBe(HttpStatusCode.RequestedRangeNotSatisfiable);
         output.WriteLine($"Fragment beyond last known index: status={(int?)beyondLast.StatusCode}.");
 
-        var downloaded = await WithSandboxRetryAsync(() => fixture.Client.DownloadMessageAsync(info));
+        var downloaded = await WithSandboxRetryAsync(() => fixture.Client.DownloadMessageAsync(info, cancellationToken));
         downloaded.FragmentCount.ShouldBe(info.Fragments);
         ((long)downloaded.Content.Length).ShouldBe(info.Size);
         downloaded.Content.ShouldBe(concatenated);
@@ -88,11 +100,11 @@ public sealed class SandboxDownloadTests(SandboxFixture fixture, ITestOutputHelp
             var fragmentsRead = await WithSandboxRetryAsync(async () =>
             {
                 await using var destination = File.Create(tempFile);
-                return await fixture.Client.DownloadMessageAsync(info.MessageId, destination, info.Fragments);
+                return await fixture.Client.DownloadMessageAsync(info.MessageId, destination, info.Fragments, cancellationToken);
             });
 
             fragmentsRead.ShouldBe(info.Fragments);
-            var streamedHash = Convert.ToHexString(SHA256.HashData(await File.ReadAllBytesAsync(tempFile)));
+            var streamedHash = Convert.ToHexString(SHA256.HashData(await File.ReadAllBytesAsync(tempFile, cancellationToken)));
             streamedHash.ShouldBe(expectedHash);
         }
         finally
@@ -100,7 +112,7 @@ public sealed class SandboxDownloadTests(SandboxFixture fixture, ITestOutputHelp
             File.Delete(tempFile);
         }
 
-        var withoutKnownFragmentCount = await WithSandboxRetryAsync(() => fixture.Client.DownloadMessageAsync(info.MessageId));
+        var withoutKnownFragmentCount = await WithSandboxRetryAsync(() => fixture.Client.DownloadMessageAsync(info.MessageId, cancellationToken));
         var withoutKnownCountHash = Convert.ToHexString(SHA256.HashData(withoutKnownFragmentCount.Content));
         withoutKnownCountHash.ShouldBe(expectedHash);
         output.WriteLine($"DownloadMessageAsync without a known fragment count observed {withoutKnownFragmentCount.FragmentCount} fragment(s) (reveals which of the 413/206 paths the sandbox takes).");
@@ -112,7 +124,7 @@ public sealed class SandboxDownloadTests(SandboxFixture fixture, ITestOutputHelp
     }
 
     [Fact(SkipUnless = nameof(SandboxCredentials.Available), SkipType = typeof(SandboxCredentials), Skip = SkipReason)]
-    public async Task DownloadMessageAsync_C54_Sandbox_ParsesAsNotification()
+    public async Task DownloadMessageAsync_C54_ParsesAsNotification()
     {
         var messages = await fixture.Client.ListMessagesAsync();
         var info = messages.FirstOrDefault(m => m.OrderType == OrderType.C54);
@@ -126,23 +138,28 @@ public sealed class SandboxDownloadTests(SandboxFixture fixture, ITestOutputHelp
         output.WriteLine($"C54 parsed with {bankMessage.Statements.Count} statement(s).");
     }
 
-    [Fact(Skip = "camt.086 model revision against the official XSD was not committed yet when this WP started; enable once Camt086Reader matches it.")]
-    public async Task DownloadMessageAsync_C86_Sandbox_ParsesWithAtLeastOneStatement()
+    [Fact(SkipUnless = nameof(SandboxCredentials.Available), SkipType = typeof(SandboxCredentials), Skip = SkipReason)]
+    public async Task DownloadMessageAsync_C86_ParsesWithAtLeastOneStatement()
     {
         var messages = await fixture.Client.ListMessagesAsync();
         var info = messages.FirstOrDefault(m => m.OrderType == OrderType.C86);
-        if (info is null)
-        {
-            output.WriteLine("No C86 message listed in the sandbox.");
-            return;
-        }
+        Assert.SkipWhen(info is null, "No C86 message listed in the sandbox.");
 
-        var message = await fixture.Client.DownloadMessageAsync(info);
+        var message = await fixture.Client.DownloadMessageAsync(info!);
+        var identifier = Iso20022Document.Identify(Iso20022Document.Load(message.GetContentAsString()));
+        (identifier.Identifier.EndsWith("camt.086.001.01", StringComparison.Ordinal)
+            || identifier.Identifier.EndsWith("camt.086.001.02", StringComparison.Ordinal)).ShouldBeTrue();
+
         var billing = Camt086Reader.Read(message);
 
         billing.Groups.ShouldNotBeEmpty();
-        billing.Groups.SelectMany(g => g.Statements).ShouldNotBeEmpty();
-        output.WriteLine($"C86 parsed with {billing.Groups.Count} group(s).");
+        var statements = billing.Groups.SelectMany(g => g.Statements).ToList();
+        statements.ShouldNotBeEmpty();
+        statements[0].StatementId.ShouldNotBeNullOrWhiteSpace();
+        statements[0].Account.ShouldNotBeNull();
+        statements.Any(s => s.Services.Count > 0 || s.Balances.Count > 0).ShouldBeTrue();
+
+        output.WriteLine($"C86: schema={identifier.Identifier}, groups={billing.Groups.Count}, statements={statements.Count}, services={statements.Sum(s => s.Services.Count)}, balances={statements.Sum(s => s.Balances.Count)}.");
     }
 
     [Theory(SkipUnless = nameof(SandboxCredentials.Available), SkipType = typeof(SandboxCredentials), Skip = SkipReason)]
@@ -152,7 +169,7 @@ public sealed class SandboxDownloadTests(SandboxFixture fixture, ITestOutputHelp
     [InlineData("CIZ")]
     [InlineData("CUZ")]
     [InlineData("AXS")]
-    public async Task DownloadMessageAsync_Pain002OrderType_Sandbox_ParsesSuccessfully(string orderTypeCode)
+    public async Task DownloadMessageAsync_Pain002OrderType_ParsesSuccessfully(string orderTypeCode)
     {
         var orderType = OrderType.Parse(orderTypeCode);
         var messages = await fixture.Client.ListMessagesAsync();
@@ -163,17 +180,19 @@ public sealed class SandboxDownloadTests(SandboxFixture fixture, ITestOutputHelp
         var identifier = Iso20022Document.Identify(Iso20022Document.Load(message.GetContentAsString()));
         identifier.Type.ShouldBe(Iso20022MessageType.Pain002);
 
-        var report = Pain002Reader.Read(message);
+        var status = Pain002Reader.Read(message);
+        status.OriginalGroup.OriginalMessageId.ShouldNotBeNullOrWhiteSpace();
+        status.OriginalGroup.OriginalMessageNameId.ShouldNotBeNullOrWhiteSpace();
         // GrpSts is optional in the ISO 20022 schema; the sandbox's mock messages populate it for
-        // some order types (e.g. XIP, CRZ, AXS) but not others, which report status only per payment
-        // information or transaction instead — that is a legitimate absence, not a reader defect.
-        report.OriginalGroup.ShouldNotBeNull();
+        // some order types (e.g. XIP, CRZ, AXS) but not others, which state status only at the
+        // payment information or transaction level instead — a legitimate absence, not a reader defect.
+        (status.OriginalGroup.GroupStatus is not null || status.PaymentInformations.Count > 0).ShouldBeTrue();
 
-        output.WriteLine($"{orderTypeCode}: schema={identifier.Identifier}, groupStatus={report.OriginalGroup.GroupStatus ?? "(not reported at group level)"}.");
+        output.WriteLine($"{orderTypeCode}: schema={identifier.Identifier}, groupStatus={status.OriginalGroup.GroupStatus ?? "(not set at group level)"}.");
     }
 
     [Fact(SkipUnless = nameof(SandboxCredentials.Available), SkipType = typeof(SandboxCredentials), Skip = SkipReason)]
-    public async Task DownloadMessageAsync_Hac_Sandbox_LogsIdentifiedMessageType()
+    public async Task DownloadMessageAsync_Hac_LogsIdentifiedMessageType()
     {
         var messages = await fixture.Client.ListMessagesAsync();
         var info = messages.FirstOrDefault(m => m.OrderType == OrderType.HAC);
@@ -186,8 +205,9 @@ public sealed class SandboxDownloadTests(SandboxFixture fixture, ITestOutputHelp
 
         if (identifier.Type == Iso20022MessageType.Pain002)
         {
-            var report = Pain002Reader.Read(message);
-            report.OriginalGroup.ShouldNotBeNull();
+            var status = Pain002Reader.Read(message);
+            status.OriginalGroup.OriginalMessageId.ShouldNotBeNullOrWhiteSpace();
+            status.OriginalGroup.OriginalMessageNameId.ShouldNotBeNullOrWhiteSpace();
         }
         else
         {
@@ -197,7 +217,7 @@ public sealed class SandboxDownloadTests(SandboxFixture fixture, ITestOutputHelp
     }
 
     [Fact(SkipUnless = nameof(SandboxCredentials.Available), SkipType = typeof(SandboxCredentials), Skip = SkipReason)]
-    public async Task DownloadMessageAsync_UnknownMessageId_Sandbox_ThrowsWithObservedStatus()
+    public async Task DownloadMessageAsync_UnknownMessageId_ThrowsWithObservedStatus()
     {
         var exception = await Should.ThrowAsync<CommerzbankException>(() => fixture.Client.DownloadMessageAsync("00000000-0000-0000-0000-000000000000"));
 
@@ -209,9 +229,9 @@ public sealed class SandboxDownloadTests(SandboxFixture fixture, ITestOutputHelp
     }
 
     // The sandbox was observed to intermittently answer repeated downloads of the same large,
-    // multi-fragment message with a transient 500 Internal Server Error (see the report); this
-    // retries such server-side errors a few times so the test reflects the download logic rather
-    // than sandbox load spikes unrelated to it.
+    // multi-fragment message with a transient 500 Internal Server Error; this retries such
+    // server-side errors a few times so the test reflects the download logic rather than sandbox
+    // load spikes unrelated to it.
     private static async Task<T> WithSandboxRetryAsync<T>(Func<Task<T>> action)
     {
         const int maxAttempts = 3;

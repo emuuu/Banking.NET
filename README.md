@@ -107,7 +107,7 @@ The production gateway is reachable over IPv4 only.
 | `C52` | Download | camt.052 | .001.08, .001.02 | Intraday account report |
 | `C53` | Download | camt.053 | .001.08, .001.02 | Account statement |
 | `C54` | Download | camt.054 | .001.08 | Debit and credit notification |
-| `C86` | Download | camt.086 | .001.02 | Bank services billing statement |
+| `C86` | Download | camt.086 | .001.02, .001.01 | Bank services billing statement |
 | `HAC` | Download | pain.002 | .001.10, .001.03 | Customer acknowledgement (payment status report) |
 | `AXS` | Download | pain.002 | .001.10 | Payment status report for cross-border credit transfers |
 | `CUZ` | Download | pain.002 | .001.10 | Payment status report for urgent credit transfers |

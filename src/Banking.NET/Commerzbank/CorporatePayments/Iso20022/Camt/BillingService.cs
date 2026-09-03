@@ -38,13 +38,13 @@ public sealed class BillingService
     /// <summary>The unit price (<c>Pric/UnitPric/Amt</c>). Negative when <c>Pric/UnitPric/Sgn</c> is <see langword="true"/>.</summary>
     public Money? UnitPrice { get; init; }
 
-    /// <summary>The coded pricing method (<c>Pric/Mtd</c>).</summary>
+    /// <summary>The coded pricing method (<c>Pric/Mtd</c>): <c>UPRC</c>/<c>STAM</c>/<c>BCHG</c>/<c>DPRC</c>/<c>FCHG</c>/<c>LPRC</c>/<c>MCHG</c>/<c>MXRD</c>/<c>TIR1</c>/<c>TIR2</c>/<c>TIR3</c>/<c>TIR4</c>/<c>TIR5</c>/<c>TIR6</c>/<c>TIR7</c>/<c>TIR8</c>/<c>TIR9</c>/<c>TPRC</c>/<c>ZPRC</c>/<c>BBSE</c>.</summary>
     public string? PriceMethod { get; init; }
 
     /// <summary>The coded pricing rule (<c>Pric/Rule</c>).</summary>
     public string? PriceRule { get; init; }
 
-    /// <summary>The coded payment method for the charge (<c>PmtMtd</c>).</summary>
+    /// <summary>The coded payment method for the charge (<c>PmtMtd</c>): <c>BCMP</c>/<c>FLAT</c>/<c>PVCH</c>/<c>INVS</c>/<c>WVED</c>/<c>FREE</c>.</summary>
     public string? PaymentMethod { get; init; }
 
     /// <summary>The original charge price before any adjustments (<c>OrgnlChrgPric/Amt</c>). Negative when <c>OrgnlChrgPric/Sgn</c> is <see langword="true"/>.</summary>
@@ -56,7 +56,7 @@ public sealed class BillingService
     /// <summary>The account balance required to offset this charge (<c>BalReqrdAcctAmt/Amt</c>). Negative when <c>BalReqrdAcctAmt/Sgn</c> is <see langword="true"/>.</summary>
     public Money? BalanceRequiredAmount { get; init; }
 
-    /// <summary>The coded tax designation (<c>TaxDsgnt/Cd</c>).</summary>
+    /// <summary>The coded tax designation (<c>TaxDsgnt/Cd</c>): <c>XMPT</c>/<c>ZERO</c>/<c>TAXE</c>.</summary>
     public string? TaxDesignation { get; init; }
 
     /// <summary>The <c>Svc</c> element this service was read from.</summary>

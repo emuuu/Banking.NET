@@ -17,10 +17,10 @@ public sealed class BillingStatement
     /// <summary>The statement creation date and time (<c>CreDtTm</c>). Timestamps without an offset are read as UTC offset zero and are not converted to local time.</summary>
     public DateTimeOffset? CreationDateTime { get; init; }
 
-    /// <summary>The coded statement status (<c>Sts</c>).</summary>
+    /// <summary>The coded statement status (<c>Sts</c>): <c>ORGN</c>/<c>RPLC</c>/<c>TEST</c>.</summary>
     public string? Status { get; init; }
 
-    /// <summary>The coded account level, e.g. whether this is a consolidated statement (<c>AcctChrtcs/AcctLvl</c>).</summary>
+    /// <summary>The coded account level, e.g. whether this is a consolidated statement (<c>AcctChrtcs/AcctLvl</c>): <c>INTM</c>/<c>SMRY</c>/<c>DETL</c>.</summary>
     public string? AccountLevel { get; init; }
 
     /// <summary>The billed account (<c>AcctChrtcs/CshAcct</c>).</summary>
