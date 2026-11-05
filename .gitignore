@@ -481,9 +481,6 @@ $RECYCLE.BIN/
 # Vim temporary swap files
 *.swp
 
-# Serena MCP server working directory
-.serena/
-
 # Credentials, certificates and keys must never be committed
 *.env
 *.p12
